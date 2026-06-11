@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python トレーナー — ブラウザで学ぶPython</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-panel: #1a2129;
+    --bg-input: #11161c;
+    --border: #2d3742;
+    --text: #e6e9ec;
+    --text-dim: #9aa5b0;
+    --accent: #4fc3f7;
+    --green: #4caf7d;
+    --red: #e57373;
+    --yellow: #ffb74d;
+    --purple: #b39ddb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+    line-height: 1.6;
+  }
+  .container { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  header h1 { font-size: 1.5rem; margin: 0; color: var(--accent); }
+  header .subtitle { color: var(--text-dim); font-size: 0.85rem; }
+
+  #status-bar { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 16px; min-height: 1.2em; }
+  #status-bar.ready { color: var(--green); }
+  #status-bar.error { color: var(--red); }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+
+  /* タブ切り替え（問題 / リファレンス） */
+  .tab-row { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    background: none;
+    color: var(--text-dim);
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 20px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }
+  #tab-reference { display: none; }
+
+  /* 問題一覧ボタン（タブバー右端） */
+  .list-open-btn {
+    margin-left: auto;
+    align-self: center;
+    margin-bottom: 6px;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .list-open-btn:hover { border-color: var(--accent); }
+
+  /* 問題一覧パネル（右からスライドイン） */
+  #list-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10, 14, 18, 0.55);
+    z-index: 90;
+  }
+  #list-overlay.open { display: block; }
+  #problem-list-panel {
+    position: absolute; top: 0; right: 0;
+    height: 100%; width: 360px; max-width: 90vw;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    animation: slide-in 0.18s ease-out;
+  }
+  @keyframes slide-in { from { transform: translateX(100%); } to { transform: none; } }
+  .list-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: bold;
+  }
+  #btn-list-close {
+    background: none; border: none;
+    color: var(--text-dim);
+    font-size: 1.4rem; line-height: 1;
+    cursor: pointer;
+  }
+  #btn-list-close:hover { color: var(--text); }
+  #problem-list {
+    list-style: none; margin: 0; padding: 8px;
+    overflow-y: auto; flex: 1;
+  }
+  #problem-list li {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  #problem-list li:hover { background: var(--bg-input); }
+  #problem-list li.current { background: var(--bg-input); border-color: var(--accent); }
+  #problem-list li .badge { flex-shrink: 0; }
+
+  /* 隠しコマンド: Konami Code */
+  #konami-banner {
+    position: fixed; top: 50%; left: 50%;
+    background: var(--bg-panel);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 26px 44px;
+    font-size: 1.35rem; font-weight: bold;
+    color: var(--accent);
+    z-index: 200;
+    box-shadow: 0 8px 40px rgba(79, 195, 247, 0.35);
+    animation: konami-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: translate(-50%, -50%);
+  }
+  @keyframes konami-pop {
+    0%   { transform: translate(-50%, -50%) scale(0.2) rotate(-8deg); opacity: 0; }
+    70%  { transform: translate(-50%, -50%) scale(1.08) rotate(2deg); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  }
+
+  /* 完走祝福オーバーレイ */
+  #complete-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10, 14, 18, 0.88);
+    z-index: 150;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+  }
+  #complete-overlay.open { display: flex; }
+  .complete-box {
+    background: var(--bg-panel);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 36px 44px;
+    max-width: 520px;
+    box-shadow: 0 8px 40px rgba(79, 195, 247, 0.35);
+    animation: complete-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes complete-pop {
+    0%   { transform: scale(0.3); opacity: 0; }
+    70%  { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  .complete-box .complete-emoji { font-size: 3rem; line-height: 1; }
+  .complete-box h2 { color: var(--accent); font-size: 1.4rem; margin: 14px 0 8px; }
+  .complete-box p { color: var(--text); margin: 0 0 22px; white-space: pre-wrap; }
+
+  /* リファレンス */
+  .ref-section h3 {
+    font-size: 1.05rem;
+    color: var(--accent);
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .ref-section p { margin: 8px 0; font-size: 0.92rem; }
+  .ref-note { color: var(--text-dim); font-size: 0.85rem; }
+  pre.code-block {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 0.86rem;
+    line-height: 1.55;
+    white-space: pre;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+
+  /* 難易度フィルタ */
+  .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .filter-row .label { color: var(--text-dim); font-size: 0.85rem; margin-right: 4px; }
+  .filter-btn {
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 16px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #0b2533; font-weight: bold; }
+
+  /* 問題表示 */
+  .problem-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .problem-head h2 { font-size: 1.15rem; margin: 0; }
+  .badge {
+    font-size: 0.72rem; font-weight: bold;
+    padding: 2px 10px; border-radius: 999px;
+  }
+  .badge.beginner     { background: #1d3a2a; color: #7ddca4; }
+  .badge.intermediate { background: #3a2f1d; color: #ffd180; }
+  .badge.advanced     { background: #34203a; color: #d8b4e8; }
+  #problem-desc { white-space: pre-wrap; margin-top: 10px; color: var(--text); }
+
+  details.hint { margin-top: 12px; }
+  details.hint summary { cursor: pointer; color: var(--yellow); font-size: 0.88rem; user-select: none; }
+  details.hint p { margin: 8px 0 0; color: var(--text-dim); font-size: 0.9rem; }
+
+  /* エディタ */
+  #editor {
+    width: 100%;
+    min-height: 220px;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    resize: vertical;
+    tab-size: 4;
+  }
+  #editor:focus { outline: none; border-color: var(--accent); }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    border: none; border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 0.95rem; font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.05s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-run { background: var(--green); color: #08130d; }
+  .btn-next { background: var(--bg-input); color: var(--text); border: 1px solid var(--border); }
+  .btn-next:hover:not(:disabled) { border-color: var(--accent); }
+  .btn-reset { background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border); }
+  .key-tip { color: var(--text-dim); font-size: 0.75rem; align-self: center; }
+
+  /* 出力・判定 */
+  .section-label { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; }
+  pre.output {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+    min-height: 2.4em;
+  }
+  pre.output.error-text { color: var(--red); }
+
+  #result-banner {
+    display: none;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+  }
+  #result-banner.correct { display: block; background: #16301f; color: var(--green); border: 1px solid #2c5a3c; }
+  #result-banner.wrong   { display: block; background: #331c1c; color: var(--red);   border: 1px solid #5a2c2c; }
+  #result-banner.error   { display: block; background: #33291c; color: var(--yellow); border: 1px solid #5a4a2c; }
+  #result-banner.special { display: block; background: #261f38; color: var(--purple); border: 1px solid #4a3a6a; }
+
+  #expected-block { display: none; margin-bottom: 12px; }
+
+  details.explanation { display: none; border-top: 1px dashed var(--border); margin-top: 4px; padding-top: 10px; }
+  details.explanation summary { cursor: pointer; color: var(--purple); font-weight: bold; user-select: none; }
+  #explanation-body { white-space: pre-wrap; color: var(--text); font-size: 0.92rem; margin-top: 10px; }
+
+  /* ローディングオーバーレイ */
+  #loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10, 14, 18, 0.92);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; z-index: 100;
+    text-align: center; padding: 20px;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-overlay .note { color: var(--text-dim); font-size: 0.85rem; max-width: 420px; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div>Python実行環境（Pyodide）を読み込んでいます…</div>
+  <div class="note">初回は約10MBのダウンロードが発生するため、回線によっては1分ほどかかります。2回目以降はブラウザキャッシュにより高速に起動します。</div>
+</div>
+
+<div class="container">
+  <header>
+    <h1>🐍 Python トレーナー</h1>
+    <span class="subtitle">ブラウザ完結型 Python学習ツール</span>
+  </header>
+  <div id="status-bar">読み込み中…</div>
+
+  <div class="tab-row">
+    <button class="tab-btn active" data-tab="problems">📝 問題</button>
+    <button class="tab-btn" data-tab="reference">📖 リファレンス</button>
+    <button id="btn-list" class="list-open-btn">📋 問題一覧</button>
+  </div>
+
+  <!-- ============ 問題タブ ============ -->
+  <div id="tab-problems">
+
+  <div class="filter-row" id="level-filter">
+    <span class="label">難易度:</span>
+    <button class="filter-btn active" data-level="all">全て</button>
+    <button class="filter-btn" data-level="beginner">beginner</button>
+    <button class="filter-btn" data-level="intermediate">intermediate</button>
+    <button class="filter-btn" data-level="advanced">advanced</button>
+  </div>
+
+  <div class="filter-row" id="category-filter">
+    <span class="label">カテゴリ:</span>
+    <button class="filter-btn active" data-category="all">全て</button>
+    <button class="filter-btn" data-category="foundation">foundation</button>
+    <button class="filter-btn" data-category="engineering">engineering</button>
+    <button class="filter-btn" data-category="practice">practice</button>
+  </div>
+
+  <!-- 問題文エリア -->
+  <div class="panel">
+    <div class="problem-head">
+      <span id="problem-badge" class="badge beginner">beginner</span>
+      <h2 id="problem-title">—</h2>
+    </div>
+    <div id="problem-desc"></div>
+    <details class="hint" id="hint-block">
+      <summary>💡 ヒントを見る</summary>
+      <p id="hint-text"></p>
+    </details>
+  </div>
+
+  <!-- コードエディタ -->
+  <div class="panel">
+    <div class="section-label">コード（Python）</div>
+    <textarea id="editor" spellcheck="false"></textarea>
+    <div class="btn-row">
+      <button id="btn-run" class="btn btn-run" disabled>▶ 実行</button>
+      <button id="btn-reset" class="btn btn-reset">コードをリセット</button>
+      <button id="btn-next" class="btn btn-next">次の問題 →</button>
+      <button id="btn-random" class="btn btn-next">🎲 ランダム</button>
+      <span class="key-tip">Ctrl+Enter でも実行できます</span>
+    </div>
+  </div>
+
+  <!-- 出力エリア -->
+  <div class="panel">
+    <div class="section-label">実行結果（標準出力）</div>
+    <pre id="output" class="output"></pre>
+  </div>
+
+  <!-- 判定・解説エリア -->
+  <div class="panel">
+    <div id="result-banner"></div>
+    <div id="expected-block">
+      <div class="section-label">期待される出力</div>
+      <pre id="expected-output" class="output"></pre>
+    </div>
+    <details class="explanation" id="explanation-block">
+      <summary>📘 解説</summary>
+      <div id="explanation-body"></div>
+    </details>
+  </div>
+
+  </div><!-- /#tab-problems -->
+
+  <!-- ============ リファレンスタブ ============ -->
+  <div id="tab-reference">
+
+    <div class="panel ref-section">
+      <h3>1. Pythonの基本構文（変数・型・演算子）</h3>
+      <p>変数は「名前 = 値」で作ります。型宣言は不要で、値に応じて自動的に型が決まります。</p>
+      <pre class="code-block">name = "Taro"      # str（文字列）
+age = 20           # int（整数）
+height = 170.5     # float（小数）
+is_student = True  # bool（真偽値: True / False）
+
+print(type(age))   # &lt;class 'int'&gt;</pre>
+      <p>主な演算子:</p>
+      <pre class="code-block">7 + 3    # 10  （和）
+7 - 3    # 4   （差）
+7 * 3    # 21  （積）
+7 / 3    # 2.3333... （割り算。結果は必ずfloat）
+7 // 3   # 2   （切り捨て割り算）
+7 % 3    # 1   （余り）
+7 ** 3   # 343 （べき乗）
+
+# 比較演算子（結果は True / False）
+a == b   # 等しい        a != b   # 等しくない
+a &lt; b    # より小さい    a &gt;= b   # 以上
+
+# 論理演算子
+a and b  /  a or b  /  not a</pre>
+      <p class="ref-note">⚠️ 初学者の躓きポイント: 「=」は代入、「==」は比較。if文で = と書くとエラーになります。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>2. 制御構文（if / for / while）</h3>
+      <p>Pythonはインデント（行頭の字下げ。半角スペース4つが標準）でブロックを表します。</p>
+      <pre class="code-block"># if / elif / else
+score = 85
+if score &gt;= 80:
+    print("合格")
+elif score &gt;= 60:
+    print("再試験")
+else:
+    print("不合格")
+
+# for（リストや range を順に処理）
+for i in range(5):       # 0, 1, 2, 3, 4
+    print(i)
+
+for fruit in ["apple", "banana"]:
+    print(fruit)
+
+# while（条件が True の間繰り返す）
+n = 3
+while n &gt; 0:
+    print(n)
+    n -= 1               # n = n - 1 と同じ</pre>
+      <p class="ref-note">⚠️ range(5) は 0〜4 で、5 は含みません。range(1, 6) と書くと 1〜5 になります。break でループ中断、continue で次の周回へスキップできます。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>3. 関数（def・return・引数）</h3>
+      <pre class="code-block">def greet(name):
+    return "こんにちは、" + name + "さん"
+
+print(greet("Taro"))     # こんにちは、Taroさん
+
+# デフォルト引数（呼び出し時に省略できる）
+def power(base, exp=2):
+    return base ** exp
+
+print(power(5))          # 25（exp は省略 → 2）
+print(power(5, 3))       # 125
+
+# 複数の値を返す（実体はタプル）
+def min_max(numbers):
+    return min(numbers), max(numbers)
+
+low, high = min_max([3, 1, 4, 1, 5])
+print(low, high)         # 1 5</pre>
+      <p class="ref-note">⚠️ return がない関数は None を返します。print(関数()) で None と表示されたら return を忘れていないか確認しましょう。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>4. データ構造（list・dict・tuple・set）</h3>
+      <pre class="code-block"># list（リスト）— 順序あり・変更可
+nums = [10, 20, 30]
+nums.append(40)          # 末尾に追加 → [10, 20, 30, 40]
+nums[0]                  # 10（先頭。インデックスは0から）
+nums[-1]                 # 40（末尾）
+len(nums)                # 4（要素数）
+
+# dict（辞書）— キーと値のペア
+user = {"name": "Taro", "age": 20}
+user["name"]             # "Taro"
+user["city"] = "Tokyo"   # 追加
+user.keys()              # キー一覧
+user.values()            # 値一覧
+user.items()             # (キー, 値) のペア一覧
+
+# tuple（タプル）— 順序あり・変更不可
+point = (3, 5)
+x, y = point             # アンパック代入
+
+# set（集合）— 重複なし・順序なし
+s = {1, 2, 2, 3}         # → {1, 2, 3}（重複は自動で消える）
+1 in s                   # True（高速な所属判定）</pre>
+      <p class="ref-note">⚠️ リストのインデックスは0始まり。存在しない辞書キーへのアクセスは KeyError になります（user.get("x") なら None が返り安全）。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>5. 内包表記</h3>
+      <p>リストなどを1行で生成する書き方です。「for文＋append」を簡潔に書けます。</p>
+      <pre class="code-block"># 基本形: [式 for 変数 in イテラブル]
+squares = [x ** 2 for x in range(5)]
+# → [0, 1, 4, 9, 16]
+
+# 条件付き: [式 for 変数 in イテラブル if 条件]
+evens = [x for x in range(10) if x % 2 == 0]
+# → [0, 2, 4, 6, 8]
+
+# 文字列にも使える
+upper = [s.upper() for s in ["a", "b", "c"]]
+# → ['A', 'B', 'C']
+
+# 辞書内包表記
+d = {x: x * 10 for x in range(3)}
+# → {0: 0, 1: 10, 2: 20}</pre>
+      <p class="ref-note">⚠️ 「式」が先、「for」が後という語順に注意。慣れるまでは同じ処理をfor文で書いてから変換すると理解しやすいです。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>6. クラスの基本</h3>
+      <pre class="code-block">class Dog:
+    def __init__(self, name):    # コンストラクタ
+        self.name = name         # インスタンス変数
+
+    def bark(self):              # メソッド
+        return self.name + ": ワン！"
+
+pochi = Dog("ポチ")              # インスタンス生成
+print(pochi.bark())              # ポチ: ワン！
+
+# 継承（親クラスの機能を引き継ぐ）
+class PoliceDog(Dog):
+    def bark(self):              # メソッドの上書き（オーバーライド）
+        return self.name + ": ワンワン！！"
+
+k9 = PoliceDog("ケン")
+print(k9.bark())                 # ケン: ワンワン！！</pre>
+      <p class="ref-note">⚠️ メソッドの第1引数には必ず self を書きます（呼び出し時には渡しません）。self を忘れると TypeError になります。親クラスのメソッドは super().メソッド名() で呼べます。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>7. 例外処理（try・except）</h3>
+      <pre class="code-block">try:
+    n = int("abc")           # ここで ValueError が発生
+    print(n)                 # ← 実行されない
+except ValueError:
+    print("数値に変換できません")
+
+# 複数の例外・エラー内容の取得
+try:
+    result = 10 / 0
+except ZeroDivisionError as e:
+    print("エラー:", e)      # エラー: division by zero
+finally:
+    print("必ず実行される")   # 成否にかかわらず実行
+
+# 自分で例外を発生させる
+def set_age(age):
+    if age &lt; 0:
+        raise ValueError("年齢は0以上にしてください")</pre>
+      <p class="ref-note">⚠️ except を書きすぎて本来直すべきバグまで握りつぶさないように。捕まえる例外の種類（ValueError など）は具体的に指定するのが基本です。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>8. よく使う組み込み関数一覧</h3>
+      <pre class="code-block">print(値)          # 画面に出力する
+len(x)             # 要素数・文字数        len("abc") → 3
+type(x)            # 型を調べる            type(1.5) → &lt;class 'float'&gt;
+int(x) / float(x) / str(x)   # 型変換      int("42") → 42
+abs(x)             # 絶対値                abs(-5) → 5
+round(x, n)        # 四捨五入（n桁）       round(3.14159, 2) → 3.14
+min(...) / max(...) # 最小・最大           max([3, 1, 4]) → 4
+sum(リスト)        # 合計                  sum([1, 2, 3]) → 6
+sorted(リスト)     # 並べ替えた新リスト    sorted([3, 1, 2]) → [1, 2, 3]
+range(start, stop) # 連続した整数の列      range(1, 4) → 1, 2, 3
+enumerate(リスト)  # 番号付きで取り出す    for i, v in enumerate(...)
+zip(a, b)          # 2つの列を同時に処理   for x, y in zip(a, b)
+input()            # ※本ツールでは使用不可（標準入力非対応）</pre>
+      <p class="ref-note">⚠️ sorted() は新しいリストを返し、リスト.sort() は元のリスト自体を並べ替えて None を返します。print(nums.sort()) が None になるのは典型的な躓きポイントです。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>9. よく使うstring操作</h3>
+      <pre class="code-block">s = "Hello, Python"
+
+# インデックスとスライス
+s[0]        # "H"（1文字目）
+s[-1]       # "n"（末尾）
+s[0:5]      # "Hello"（0番目から5番目の手前まで）
+s[7:]       # "Python"（7番目から最後まで）
+s[::-1]     # 逆順（"nohtyP ,olleH"）
+
+# 大文字・小文字
+s.upper()   # "HELLO, PYTHON"
+s.lower()   # "hello, python"
+
+# 置換・分割・結合
+s.replace("Python", "World")   # "Hello, World"
+"a,b,c".split(",")             # ['a', 'b', 'c']
+"-".join(["a", "b", "c"])      # "a-b-c"
+
+# 検索・判定
+s.find("Py")        # 7（見つからなければ -1）
+"Py" in s           # True
+s.startswith("He")  # True
+"  abc  ".strip()   # "abc"（前後の空白を除去）
+
+# f文字列（変数の埋め込み）
+name, age = "Taro", 20
+f"{name}は{age}歳"             # "Taroは20歳"
+f"{3.14159:.2f}"               # "3.14"（小数2桁）
+"{}は{}歳".format(name, age)   # format方式でも同じ</pre>
+      <p class="ref-note">⚠️ 文字列は変更不可（イミュータブル）。s.upper() は新しい文字列を返すだけで、s 自体は変わりません。結果を使うには s = s.upper() のように代入が必要です。</p>
+    </div>
+
+    <div class="panel ref-section">
+      <h3>10. pandas入門（参考・読み物）</h3>
+      <p class="ref-note">⚠️ pandasは外部ライブラリのため、本ツールの実行環境では実行できません。このセクションは概念とコード例を紹介する参考資料です。手元で試す場合は「pip install pandas」でインストールしてください。</p>
+      <p><strong>pandasとは</strong>: 表形式データ（CSV・Excel・データベースの表など）を読み込み・加工・集計するためのデータ分析ライブラリです。データの前処理・集計・分析の定番ツールで、機械学習の前段階のデータ整形にも広く使われます。慣例として「import pandas as pd」と略称で読み込みます。</p>
+      <p><strong>主要な3つの概念</strong>:</p>
+      <ul>
+        <li><strong>DataFrame</strong> — 行と列を持つ2次元の表。Excelのシートのようなイメージで、pandasの中心となるデータ構造です。</li>
+        <li><strong>Series</strong> — 1列分のデータ（ラベル付きの1次元配列）。DataFrameから1列取り出すとSeriesになります。</li>
+        <li><strong>Index</strong> — 各行・各列を識別するラベル。行の見出し（既定では 0, 1, 2, ...）と列名がこれにあたります。</li>
+      </ul>
+      <pre class="code-block">import pandas as pd
+
+# Series — 1列分のデータ（ラベル付き）
+s = pd.Series([10, 20, 30], index=["a", "b", "c"])
+s["b"]                  # 20（ラベルで値を取り出せる）
+
+# DataFrame — 2次元の表（辞書から作成）
+df = pd.DataFrame({
+    "name": ["Taro", "Hanako", "Jiro"],
+    "age":  [20, 25, 32],
+    "city": ["Tokyo", "Osaka", "Tokyo"],
+})
+#      name  age   city
+# 0    Taro   20  Tokyo
+# 1  Hanako   25  Osaka
+# 2    Jiro   32  Tokyo
+
+df.index                # 行ラベル: RangeIndex(start=0, stop=3, step=1)
+df.columns              # 列名:     Index(['name', 'age', 'city'], ...)</pre>
+      <p><strong>よく使う操作</strong>:</p>
+      <ul>
+        <li><strong>read_csv</strong> — CSVファイルを読み込んでDataFrameを作る（入口になる操作）</li>
+        <li><strong>head / 列選択 / 条件抽出</strong> — データの中身を確認し、必要な部分を取り出す</li>
+        <li><strong>groupby</strong> — 「〜ごとに集計」（例: 都市ごとの平均年齢）</li>
+        <li><strong>merge</strong> — 共通の列をキーに2つの表を結合する（SQLのJOINに相当）</li>
+        <li><strong>fillna</strong> — 欠損値（NaN）を指定した値で埋める</li>
+        <li><strong>sort_values</strong> — 指定した列の値で並べ替える</li>
+      </ul>
+      <pre class="code-block"># CSVの読み込み（ファイルの1行目が列名になる）
+df = pd.read_csv("data.csv")
+df.head()               # 先頭5行を表示（データ確認の第一歩）
+
+# 列の取り出しと条件抽出
+df["age"]               # 1列を取り出す（結果はSeries）
+df[["name", "age"]]     # 複数列を取り出す（結果はDataFrame）
+df[df["age"] &gt;= 25]     # 条件を満たす行だけ抽出
+#      name  age   city
+# 1  Hanako   25  Osaka
+# 2    Jiro   32  Tokyo
+
+# groupby — 都市ごとの平均年齢
+df.groupby("city")["age"].mean()
+# city
+# Osaka    25.0
+# Tokyo    26.0
+
+# merge — name をキーに2つの表を結合
+scores = pd.DataFrame({"name": ["Taro", "Jiro"], "score": [80, 90]})
+pd.merge(df, scores, on="name", how="left")
+#      name  age   city  score
+# 0    Taro   20  Tokyo   80.0
+# 1  Hanako   25  Osaka    NaN   ← 対応がない行は NaN（欠損値）
+# 2    Jiro   32  Tokyo   90.0
+
+# fillna — 欠損値（NaN）を 0 で埋める
+data = pd.DataFrame({"sales": [100, None, 300]})
+data.fillna(0)
+#    sales
+# 0  100.0
+# 1    0.0
+# 2  300.0
+
+# sort_values — age の大きい順に並べ替え
+df.sort_values("age", ascending=False)</pre>
+      <p class="ref-note">⚠️ 再掲: 上記のコードは本ツールのコードエディタでは実行できません（ModuleNotFoundError になります）。手元のPython環境（pandasインストール済み）で試してください。</p>
+    </div>
+
+  </div><!-- /#tab-reference -->
+</div>
+
+<!-- 問題一覧パネル -->
+<div id="list-overlay">
+  <div id="problem-list-panel">
+    <div class="list-head">
+      <span>📋 問題一覧</span>
+      <button id="btn-list-close" title="閉じる">×</button>
+    </div>
+    <ul id="problem-list"></ul>
+  </div>
+</div>
+
+<!-- 完走祝福オーバーレイ -->
+<div id="complete-overlay">
+  <div class="complete-box">
+    <div class="complete-emoji">🎉</div>
+    <h2>コンプリート！</h2>
+    <p id="complete-message"></p>
+    <button id="btn-restart" class="btn btn-run">最初の問題に戻る →</button>
+  </div>
+</div>
+
+<script src="problems.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v0.28.3/full/";
+
+  let pyodide = null;
+  let currentProblem = null;
+  let currentFilter = "all";
+  let currentCategory = "all";
+  let running = false;
+
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    overlay: $("loading-overlay"),
+    status: $("status-bar"),
+    badge: $("problem-badge"),
+    title: $("problem-title"),
+    desc: $("problem-desc"),
+    hintBlock: $("hint-block"),
+    hintText: $("hint-text"),
+    editor: $("editor"),
+    btnRun: $("btn-run"),
+    btnReset: $("btn-reset"),
+    btnNext: $("btn-next"),
+    output: $("output"),
+    resultBanner: $("result-banner"),
+    expectedBlock: $("expected-block"),
+    expectedOutput: $("expected-output"),
+    explanationBlock: $("explanation-block"),
+    explanationBody: $("explanation-body"),
+    btnList: $("btn-list"),
+    btnListClose: $("btn-list-close"),
+    listOverlay: $("list-overlay"),
+    problemList: $("problem-list"),
+    btnRandom: $("btn-random"),
+    completeOverlay: $("complete-overlay"),
+    completeMessage: $("complete-message"),
+    btnRestart: $("btn-restart"),
+  };
+
+  // ---- 出力の正規化（改行コード・各行末尾の空白・前後の空白を吸収） ----
+  function normalizeOutput(s) {
+    return String(s)
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((line) => line.replace(/[ \t]+$/, ""))
+      .join("\n")
+      .trim();
+  }
+
+  // category未設定の問題は foundation として扱う（フォールバック）
+  function problemCategory(problem) {
+    return problem.category || "foundation";
+  }
+
+  // ---- 問題の選択（難易度 × カテゴリのAND条件） ----
+  function filteredProblems() {
+    return PROBLEMS.filter(
+      (p) =>
+        (currentFilter === "all" || p.level === currentFilter) &&
+        (currentCategory === "all" || problemCategory(p) === currentCategory)
+    );
+  }
+
+  function pickRandomProblem() {
+    const pool = filteredProblems();
+    if (pool.length === 0) return null;
+    if (pool.length === 1) return pool[0];
+    // 直前と同じ問題は避ける
+    let candidate;
+    do {
+      candidate = pool[Math.floor(Math.random() * pool.length)];
+    } while (currentProblem && candidate.id === currentProblem.id);
+    return candidate;
+  }
+
+  // 全レベルを通した通番（PROBLEMS配列の並び順で 1 始まり）
+  function problemNumber(problem) {
+    return PROBLEMS.indexOf(problem) + 1;
+  }
+
+  // フィルタ内で現在の問題の次へ。最後の問題なら完走祝福画面を表示する
+  function goNextProblem() {
+    const pool = filteredProblems();
+    if (pool.length === 0) return;
+    const idx = currentProblem ? pool.findIndex((p) => p.id === currentProblem.id) : -1;
+    if (idx === -1) {
+      showProblem(pool[0]);
+    } else if (idx === pool.length - 1) {
+      openComplete(pool);
+    } else {
+      showProblem(pool[idx + 1]);
+    }
+  }
+
+  // ---- 完走祝福画面 ----
+  function openComplete(pool) {
+    const parts = [];
+    if (currentFilter !== "all") parts.push(currentFilter);
+    if (currentCategory !== "all") parts.push(currentCategory);
+    const label =
+      (parts.length > 0 ? parts.join(" × ") + " の" : "") + "全" + pool.length + "問";
+    els.completeMessage.textContent =
+      label + "をやり切りました！\nここまで続けられたこと自体が大きな力です。\nおつかれさまでした 🐍✨";
+    els.completeOverlay.classList.add("open");
+  }
+
+  function closeComplete() {
+    els.completeOverlay.classList.remove("open");
+  }
+
+  function showProblem(problem) {
+    currentProblem = problem;
+    els.badge.textContent = problem.level;
+    els.badge.className = "badge " + problem.level;
+    els.title.textContent = "No." + problemNumber(problem) + " " + problem.title;
+    els.desc.textContent = problem.description;
+    if (problem.hint) {
+      els.hintBlock.style.display = "";
+      els.hintBlock.open = false;
+      els.hintText.textContent = problem.hint;
+    } else {
+      els.hintBlock.style.display = "none";
+    }
+    els.editor.value = problem.starterCode || "";
+    clearResult();
+  }
+
+  function clearResult() {
+    els.output.textContent = "";
+    els.output.classList.remove("error-text");
+    els.resultBanner.className = "";
+    els.resultBanner.textContent = "";
+    els.expectedBlock.style.display = "none";
+    els.explanationBlock.style.display = "none";
+    els.explanationBlock.open = false;
+  }
+
+  // ---- 判定結果の表示 ----
+  function showResult(kind, message) {
+    els.resultBanner.className = kind; // correct / wrong / error
+    els.resultBanner.textContent = message;
+
+    els.explanationBody.textContent = currentProblem.explanation || "";
+    els.explanationBlock.style.display = "block";
+
+    // 解説は正解・不正解・エラーのいずれでも折りたたみで表示する
+    els.explanationBlock.open = false;
+
+    if (kind === "wrong") {
+      // 不正解時のみ期待される出力を表示
+      els.expectedOutput.textContent = currentProblem.expectedOutput;
+      els.expectedBlock.style.display = "block";
+    } else {
+      els.expectedBlock.style.display = "none";
+    }
+  }
+
+  // ---- 問題一覧パネル ----
+  function renderProblemList() {
+    els.problemList.innerHTML = "";
+    filteredProblems().forEach((p) => {
+      const li = document.createElement("li");
+      if (currentProblem && p.id === currentProblem.id) li.classList.add("current");
+
+      const badge = document.createElement("span");
+      badge.className = "badge " + p.level;
+      badge.textContent = p.level;
+
+      const title = document.createElement("span");
+      title.textContent = "No." + problemNumber(p) + " " + p.title;
+
+      li.appendChild(badge);
+      li.appendChild(title);
+      li.addEventListener("click", () => {
+        showProblem(p);
+        closeProblemList();
+      });
+      els.problemList.appendChild(li);
+    });
+  }
+
+  function openProblemList() {
+    renderProblemList(); // 開くたびに再描画（フィルタ・表示中問題と連動）
+    els.listOverlay.classList.add("open");
+  }
+
+  function closeProblemList() {
+    els.listOverlay.classList.remove("open");
+  }
+
+  // ---- 隠しコマンド①: 猫コマンド ----
+  const CAT_PATTERNS = [
+    { art: " /\\_/\\\n( o.o )\n > ^ <", message: "にゃーん。今日もがんばってるね。" },
+    { art: " /\\_/\\\n( -.- ) zzZ\n > ^ <", message: "ねこは寝るのも仕事。あなたも休憩は仕事のうちだよ。" },
+    { art: "(=^･ω･^=)", message: "エラーが出ても大丈夫。ねこはいつでも味方だよ。" },
+    { art: "(=^‥^=)ノ", message: "やっほー。深呼吸、ひとつどうぞ。すー、はー。" },
+    { art: "  ∧,,∧\n（=･ω･=）\n（,,ｕｕ,,）", message: "ちょっとひとやすみ。お水は飲んだ？" },
+    { art: " /\\_/\\\n( ^.^ )\n(\")_(\")", message: "ここまで来ただけで、えらい！" },
+    { art: "(=ＴェＴ=)", message: "うまくいかない日もあるよ。それでも書いたコードは無駄じゃない。" },
+    { art: "ヾ(=ﾟ･ﾟ=)ﾉ", message: "にゃにゃーん！次の問題もきっと解けるよ。" },
+    { art: " /\\_/\\\n( o.O )\n > ? <", message: "わからないときはリファレンスタブを見るのもアリだよ。" },
+    { art: "(=^-ω-^=)", message: "目を閉じて10秒。画面の見すぎ注意だよ。" },
+    { art: "  ∧＿∧\n（ =^ω^）\n（つ旦と）", message: "お茶でもどうぞ。あったかいのが効くよ。" },
+    { art: "(=｀ω´=)", message: "バグなんてこわくない！ねこが見張っててあげる。" },
+    { art: " /\\_/\\  /\\_/\\\n( o.o )( o.o )\n > ^ <  > ^ <", message: "2匹で応援中。にゃん、にゃん。" },
+    { art: "（=^・^=）♪", message: "鼻歌まじりでいこう。コードは逃げないからね。" },
+    { art: " /\\_/\\\n( =^.^= )\n /  |  \\", message: "肩の力を抜いて。ストレッチにゃ。" },
+    { art: "(=^･ｪ･^=)", message: "ここまでの努力、ねこはちゃんと見てたよ。すごいすごい。" },
+  ];
+
+  function showCat() {
+    const pick = CAT_PATTERNS[Math.floor(Math.random() * CAT_PATTERNS.length)];
+    clearResult();
+    els.output.textContent = pick.art + "\n\n" + pick.message;
+    els.resultBanner.className = "special";
+    els.resultBanner.textContent = "🐱 ねこが来てくれました — ひとやすみ、ひとやすみ。";
+  }
+
+  // ---- 隠しコマンド②: Konami Code ----
+  const KONAMI_SEQ = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+  let konamiPos = 0;
+
+  function showKonami() {
+    if ($("konami-banner")) return; // 表示中は重複させない
+    const banner = document.createElement("div");
+    banner.id = "konami-banner";
+    banner.textContent = "🎉 隠しコマンド発見！";
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 3000);
+  }
+
+  // ---- コード実行 ----
+  async function runCode() {
+    if (running) return;
+
+    // 猫コマンド（正誤判定をスキップするSpecialイベント）
+    const typed = els.editor.value.trim();
+    if (typed === "にゃ～ん" || typed === "にゃーん" || typed === "nyan") {
+      showCat();
+      return;
+    }
+
+    if (!pyodide || !currentProblem) return;
+    running = true;
+    els.btnRun.disabled = true;
+    clearResult();
+    els.output.textContent = "実行中…";
+
+    const stdoutLines = [];
+    pyodide.setStdout({ batched: (line) => stdoutLines.push(line) });
+    pyodide.setStderr({ batched: (line) => stdoutLines.push(line) });
+
+    // 実行ごとに独立した名前空間を使い、前回の変数が残らないようにする
+    const namespace = pyodide.globals.get("dict")();
+    try {
+      await pyodide.runPythonAsync(els.editor.value, { globals: namespace });
+      const userOutput = stdoutLines.join("\n");
+      els.output.textContent = userOutput === "" ? "（出力なし）" : userOutput;
+
+      if (normalizeOutput(userOutput) === normalizeOutput(currentProblem.expectedOutput)) {
+        showResult("correct", "✅ 正解！ おめでとうございます。");
+      } else {
+        showResult("wrong", "❌ 不正解 — 出力が期待値と一致しません。下の期待される出力と見比べてみましょう。");
+      }
+    } catch (err) {
+      const partial = stdoutLines.join("\n");
+      els.output.classList.add("error-text");
+      els.output.textContent =
+        (partial ? partial + "\n" : "") + errorToText(err);
+      showResult("error", "⚠️ エラー — コードの実行中に例外が発生しました。エラーメッセージを読んで修正しましょう。");
+    } finally {
+      namespace.destroy();
+      running = false;
+      els.btnRun.disabled = false;
+    }
+  }
+
+  // ---- エラーの文字列化（Error以外のオブジェクトでも内容が読めるようにする） ----
+  function errorToText(err) {
+    if (err instanceof Error) return err.message || String(err);
+    if (typeof err === "object" && err !== null) {
+      try {
+        return JSON.stringify(err);
+      } catch (_) {
+        return Object.prototype.toString.call(err);
+      }
+    }
+    return String(err);
+  }
+
+  // ---- Pyodide初期化 ----
+  async function init() {
+    try {
+      if (typeof loadPyodide !== "function") {
+        throw new Error("pyodide.js が読み込まれていません（CDNへの接続を確認してください）");
+      }
+      pyodide = await loadPyodide({ indexURL: PYODIDE_INDEX_URL });
+      els.overlay.style.display = "none";
+      els.status.textContent = "✔ Python実行環境の準備ができました（Pyodide " + pyodide.version + "）";
+      els.status.className = "ready";
+      els.btnRun.disabled = false;
+    } catch (err) {
+      console.error("Pyodideの読み込みに失敗しました:", err);
+      els.overlay.innerHTML =
+        '<div style="color:#e57373; max-width:480px;">Pyodideの読み込みに失敗しました。<br>' +
+        "インターネット接続を確認してページを再読み込みしてください。<br><br>" +
+        '<span style="font-size:0.8rem; color:#9aa5b0;"></span></div>';
+      els.overlay.querySelector("span").textContent = errorToText(err);
+      els.status.textContent = "Pyodideの読み込みに失敗しました";
+      els.status.className = "error";
+    }
+  }
+
+  // ---- イベント登録 ----
+  els.btnRun.addEventListener("click", runCode);
+
+  // 問題一覧パネル（開閉）
+  els.btnList.addEventListener("click", openProblemList);
+  els.btnListClose.addEventListener("click", closeProblemList);
+  els.listOverlay.addEventListener("click", (e) => {
+    if (e.target === els.listOverlay) closeProblemList(); // 背景クリックで閉じる
+  });
+
+  // Escで問題一覧を閉じる ＋ Konami Code監視
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeProblemList();
+      return;
+    }
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (key === KONAMI_SEQ[konamiPos]) {
+      konamiPos++;
+      if (konamiPos === KONAMI_SEQ.length) {
+        konamiPos = 0;
+        showKonami();
+      }
+    } else {
+      // 途中で外れたらリセット（外れたキーが先頭と一致するなら1から数え直す）
+      konamiPos = key === KONAMI_SEQ[0] ? 1 : 0;
+    }
+  });
+
+  els.btnNext.addEventListener("click", goNextProblem);
+
+  els.btnRandom.addEventListener("click", () => {
+    const p = pickRandomProblem();
+    if (p) showProblem(p);
+  });
+
+  els.btnRestart.addEventListener("click", () => {
+    closeComplete();
+    const pool = filteredProblems();
+    if (pool.length > 0) showProblem(pool[0]);
+  });
+
+  els.btnReset.addEventListener("click", () => {
+    if (currentProblem) {
+      els.editor.value = currentProblem.starterCode || "";
+      clearResult();
+    }
+  });
+
+  // タブ切り替え（問題 ↔ リファレンス）。DOMは消さずdisplay切り替えのみなので
+  // エディタ内容や実行結果はタブを行き来しても保持される。
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const isProblems = btn.dataset.tab === "problems";
+      $("tab-problems").style.display = isProblems ? "" : "none";
+      $("tab-reference").style.display = isProblems ? "none" : "block";
+    });
+  });
+
+  // フィルタ行（難易度・カテゴリ）共通のセットアップ。行内のみで active を切り替え、
+  // 変更後は絞り込み結果の最初の問題から順番に進む（0件の場合は表示中の問題を維持）
+  function setupFilterRow(rowId, onSelect) {
+    document.querySelectorAll("#" + rowId + " .filter-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document
+          .querySelectorAll("#" + rowId + " .filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        onSelect(btn);
+        const pool = filteredProblems();
+        if (pool.length > 0) showProblem(pool[0]);
+      });
+    });
+  }
+  setupFilterRow("level-filter", (btn) => { currentFilter = btn.dataset.level; });
+  setupFilterRow("category-filter", (btn) => { currentCategory = btn.dataset.category; });
+
+  // Tabキーで4スペース挿入・Ctrl+Enterで実行
+  els.editor.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const start = els.editor.selectionStart;
+      const end = els.editor.selectionEnd;
+      els.editor.value =
+        els.editor.value.substring(0, start) + "    " + els.editor.value.substring(end);
+      els.editor.selectionStart = els.editor.selectionEnd = start + 4;
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      runCode();
+    }
+  });
+
+  // ---- 起動 ----
+  if (PROBLEMS.length > 0) showProblem(PROBLEMS[0]);
+  init();
+})();
+</script>
+</body>
+</html>
