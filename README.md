@@ -8,7 +8,7 @@
 2. 問題を選んでコードを書く
 3. 「実行」ボタンを押して結果を確認する
 
-**GitHub Pages URL**: https://bobotan.github.io/python-trainer/
+**GitHub Pages URL**: https://bobotan02.github.io/python-trainer/
 
 > ※ GitHub Pagesを有効化した後にアクセスできます。
 
