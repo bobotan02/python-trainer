@@ -312,6 +312,105 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   #loading-overlay .note { color: var(--text-dim); font-size: 0.85rem; max-width: 420px; }
+
+  /* ステップ実行タブ */
+  #sp-ed {
+    width: 100%;
+    min-height: 180px;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    resize: vertical;
+    tab-size: 4;
+  }
+  #sp-ed:focus { outline: none; border-color: var(--accent); }
+
+  .sp-codeview {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    overflow-y: auto;
+    max-height: 300px;
+    margin-bottom: 12px;
+  }
+  .sp-cline { display: flex; font-family: var(--mono); font-size: 0.86rem; line-height: 1.7; }
+  .sp-cline .sp-ln {
+    width: 38px; flex: none; text-align: right;
+    padding-right: 10px; color: var(--text-dim); user-select: none;
+  }
+  .sp-cline .sp-code { white-space: pre; padding-right: 12px; color: var(--text); }
+  .sp-cline.active { background: rgba(255, 183, 77, 0.12); }
+  .sp-cline.active .sp-code { color: #fff; }
+  .sp-cline.active .sp-ln { color: var(--yellow); font-weight: bold; }
+
+  .sp-stepper {
+    display: none; align-items: center; gap: 8px;
+    margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .sp-stepper button {
+    height: 38px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text);
+    font-size: 1rem; cursor: pointer; flex: none; padding: 0 14px;
+  }
+  .sp-stepper button.sp-play { color: var(--green); border-color: rgba(76, 175, 125, 0.4); }
+  .sp-stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .sp-stepper input[type=range] {
+    flex: 1; min-width: 80px;
+    -webkit-appearance: none; height: 4px; border-radius: 4px;
+    background: var(--border); outline: none;
+  }
+  .sp-stepper input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--yellow); cursor: pointer;
+  }
+  .sp-step-lbl { font-size: 0.8rem; color: var(--text-dim); min-width: 56px; text-align: right; }
+  .sp-step-lbl b { color: var(--text); }
+
+  .sp-scope {
+    display: none; font-size: 0.8rem; color: var(--accent);
+    margin-bottom: 8px; letter-spacing: 0.03em;
+  }
+  .sp-scope .sp-ev { color: var(--text-dim); margin-left: 6px; }
+
+  .sp-vars { display: none; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .sp-var {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    display: flex; gap: 10px; align-items: baseline;
+    font-size: 0.88rem; transition: border-color 0.15s, background 0.15s;
+  }
+  .sp-var.chg { border-color: var(--yellow); background: rgba(255, 183, 77, 0.07); }
+  .sp-var.new { border-color: var(--green);  background: rgba(76, 175, 125, 0.07); }
+  .sp-var .sp-k { color: var(--purple); font-family: var(--mono); font-weight: 600; flex: none; }
+  .sp-var .sp-eq { color: var(--text-dim); flex: none; }
+  .sp-var .sp-v { font-family: var(--mono); word-break: break-word; }
+  .sp-var .sp-tag { margin-left: auto; font-size: 0.72rem; color: var(--text-dim); flex: none; align-self: center; }
+  .sp-var.new .sp-tag { color: var(--green); }
+  .sp-var.chg .sp-tag { color: var(--yellow); }
+
+  .sp-v-str    { color: #9ee493; }
+  .sp-v-num    { color: var(--accent); }
+  .sp-v-none   { color: var(--text-dim); }
+  .sp-v-bool   { color: var(--purple); }
+  .sp-v-bracket{ color: #7a8a96; }
+
+  .sp-outbox pre {
+    margin: 0; font-family: var(--mono); font-size: 0.88rem;
+    color: var(--green); white-space: pre-wrap;
+  }
+  pre.sp-errbox {
+    background: rgba(229, 115, 115, 0.08);
+    border: 1px solid rgba(229, 115, 115, 0.3);
+    color: var(--red); border-radius: 8px;
+    padding: 10px 14px; font-family: var(--mono);
+    font-size: 0.86rem; white-space: pre-wrap; margin: 0 0 12px;
+  }
 </style>
 </head>
 <body>
@@ -332,6 +431,7 @@
   <div class="tab-row">
     <button class="tab-btn active" data-tab="problems">📝 問題</button>
     <button class="tab-btn" data-tab="reference">📖 リファレンス</button>
+    <button class="tab-btn" data-tab="stepper">🔍 ステップ実行</button>
     <button id="btn-list" class="list-open-btn">📋 問題一覧</button>
   </div>
 
@@ -704,6 +804,45 @@ df.sort_values("age", ascending=False)</pre>
     </div>
 
   </div><!-- /#tab-reference -->
+
+  <!-- ============ ステップ実行タブ ============ -->
+  <div id="tab-stepper" style="display:none">
+
+    <div class="panel">
+      <p style="color:var(--green);font-size:0.85rem;margin:0 0 14px;line-height:1.7;">
+        🔒 コードはブラウザ内（Pyodide / WebAssembly）だけで実行されます。サーバーにもAIにも送信・保存されません。公開端末では本物のAPIキー等を貼らないでください。
+      </p>
+      <div class="section-label">サンプルを選ぶ</div>
+      <div class="filter-row" id="sp-samples"></div>
+      <div class="section-label">コード（Python）</div>
+      <textarea id="sp-ed" spellcheck="false" placeholder="ここにPythonコードを書いて「ステップ実行」を押す"></textarea>
+      <div class="btn-row">
+        <button id="sp-run-btn" class="btn btn-run" disabled>▶ ステップ実行</button>
+      </div>
+    </div>
+
+    <div class="sp-codeview" id="sp-codeview" style="display:none;"></div>
+
+    <div class="sp-stepper" id="sp-stepper" style="display:none;">
+      <button id="sp-prev">◀</button>
+      <button class="sp-play" id="sp-play">▶ 自動</button>
+      <input type="range" id="sp-slider" min="0" max="0" value="0">
+      <button id="sp-next">▶</button>
+      <span class="sp-step-lbl" id="sp-step-lbl"><b>0</b>/0</span>
+    </div>
+
+    <div class="sp-scope" id="sp-scope" style="display:none;"></div>
+    <div class="sp-vars"  id="sp-vars"  style="display:none;"></div>
+    <div id="sp-empty" class="section-label" style="display:none;">この時点ではまだ変数がありません</div>
+
+    <div class="panel sp-outbox" id="sp-outbox" style="display:none;">
+      <div class="section-label">PRINT 出力（この行まで）</div>
+      <pre id="sp-outpre"></pre>
+    </div>
+
+    <pre class="sp-errbox" id="sp-errbox" style="display:none;"></pre>
+
+  </div><!-- /#tab-stepper -->
 </div>
 
 <!-- 問題一覧パネル -->
@@ -1093,15 +1232,16 @@ df.sort_values("age", ascending=False)</pre>
     }
   });
 
-  // タブ切り替え（問題 ↔ リファレンス）。DOMは消さずdisplay切り替えのみなので
+  // タブ切り替え（問題 / リファレンス / ステップ実行）。DOMは消さずdisplay切り替えのみなので
   // エディタ内容や実行結果はタブを行き来しても保持される。
+  const TAB_NAMES = ["problems", "reference", "stepper"];
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      const isProblems = btn.dataset.tab === "problems";
-      $("tab-problems").style.display = isProblems ? "" : "none";
-      $("tab-reference").style.display = isProblems ? "none" : "block";
+      TAB_NAMES.forEach((name) => {
+        $("tab-" + name).style.display = btn.dataset.tab === name ? "block" : "none";
+      });
     });
   });
 
@@ -1137,6 +1277,255 @@ df.sort_values("age", ascending=False)</pre>
       runCode();
     }
   });
+
+  // ---- ステップ実行タブ ----
+  let spSteps = [], spOutput = "", spIdx = 0, spSrcLines = [], spPlayTimer = null;
+  let traceReady = false;
+
+  const SP_SAMPLES = [
+    { name: "辞書ループ",     code: 'scores = {"math": 80, "english": 65}\n\nfor subject, point in scores.items():\n    grade = "A" if point >= 80 else "B"\n    print(subject, grade)' },
+    { name: "関数とスコープ", code: 'def add_tax(price, rate=0.1):\n    tax = price * rate\n    return price + tax\n\ntotal = 0\nfor p in [100, 250]:\n    total += add_tax(p)\nprint(round(total, 1))' },
+    { name: "参照の落とし穴", code: 'a = [1, 2, 3]\nb = a\nb.append(99)\nc = a.copy()\nc.append(0)\nprint("a =", a)\nprint("c =", c)' },
+    { name: "辞書で数える",   code: 'words = ["a", "b", "a", "c", "b", "a"]\ncount = {}\nfor w in words:\n    count[w] = count.get(w, 0) + 1\nprint(count)' },
+  ];
+
+  const spEd         = $("sp-ed");
+  const spRunBtn     = $("sp-run-btn");
+  const spCodeview   = $("sp-codeview");
+  const spStepperCtrl= $("sp-stepper");
+  const spSlider     = $("sp-slider");
+  const spPrev       = $("sp-prev");
+  const spNext       = $("sp-next");
+  const spPlay       = $("sp-play");
+  const spStepLbl    = $("sp-step-lbl");
+  const spScope      = $("sp-scope");
+  const spVars       = $("sp-vars");
+  const spEmpty      = $("sp-empty");
+  const spOutbox     = $("sp-outbox");
+  const spOutpre     = $("sp-outpre");
+  const spErrbox     = $("sp-errbox");
+
+  // サンプルボタン生成
+  (function () {
+    const container = $("sp-samples");
+    SP_SAMPLES.forEach(function (s, i) {
+      const btn = document.createElement("button");
+      btn.className = "filter-btn" + (i === 0 ? " active" : "");
+      btn.textContent = s.name;
+      btn.addEventListener("click", function () {
+        container.querySelectorAll(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        spEd.value = s.code;
+      });
+      container.appendChild(btn);
+    });
+  })();
+  spEd.value = SP_SAMPLES[0].code;
+
+  spEd.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const s = spEd.selectionStart;
+      spEd.value = spEd.value.slice(0, s) + "    " + spEd.value.slice(spEd.selectionEnd);
+      spEd.selectionStart = spEd.selectionEnd = s + 4;
+    }
+  });
+
+  function spEscHtml(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function spValHtml(o) {
+    if (!o) return "";
+    switch (o.t) {
+      case "str":   return '<span class="sp-v-str">"' + spEscHtml(o.v) + '"</span>';
+      case "num":   return '<span class="sp-v-num">'  + spEscHtml(o.v) + "</span>";
+      case "bool":  return '<span class="sp-v-bool">' + spEscHtml(o.v) + "</span>";
+      case "none":  return '<span class="sp-v-none">None</span>';
+      case "list":  return '<span class="sp-v-bracket">[</span>' + o.v.map(spValHtml).join('<span class="sp-v-bracket">, </span>') + '<span class="sp-v-bracket">]</span>';
+      case "tuple": return '<span class="sp-v-bracket">(</span>' + o.v.map(spValHtml).join('<span class="sp-v-bracket">, </span>') + '<span class="sp-v-bracket">)</span>';
+      case "set":   return '<span class="sp-v-bracket">{</span>' + o.v.map(spValHtml).join('<span class="sp-v-bracket">, </span>') + '<span class="sp-v-bracket">}</span>';
+      case "dict":  return '<span class="sp-v-bracket">{</span>' + o.v.map(function (p) { return spValHtml(p[0]) + '<span class="sp-v-bracket">: </span>' + spValHtml(p[1]); }).join('<span class="sp-v-bracket">, </span>') + '<span class="sp-v-bracket">}</span>';
+      default:      return '<span class="sp-v-none">' + spEscHtml(o.v) + "</span>";
+    }
+  }
+
+  function spBuildCodeView() {
+    spCodeview.innerHTML = "";
+    spSrcLines.forEach(function (ln, i) {
+      const row = document.createElement("div");
+      row.className = "sp-cline";
+      row.dataset.line = i + 1;
+      row.innerHTML =
+        '<span class="sp-ln">' + (i + 1) + "</span>" +
+        '<span class="sp-code">' + (spEscHtml(ln) || " ") + "</span>";
+      spCodeview.appendChild(row);
+    });
+    spCodeview.style.display = "block";
+  }
+
+  function spRender() {
+    if (!spSteps.length) return;
+    const st = spSteps[spIdx];
+    spStepLbl.innerHTML = "<b>" + (spIdx + 1) + "</b>/" + spSteps.length;
+
+    Array.prototype.forEach.call(spCodeview.children, function (r) {
+      r.classList.toggle("active", +r.dataset.line === st.line);
+    });
+    const activeRow = spCodeview.querySelector(".sp-cline.active");
+    if (activeRow) activeRow.scrollIntoView({ block: "nearest" });
+
+    const evMap = { line: "実行", call: "関数に入る ↓", return: "戻る ↑" };
+    spScope.style.display = "block";
+    spScope.innerHTML =
+      (st.func === "<module>" ? "スコープ: グローバル" : "スコープ: " + spEscHtml(st.func) + "()") +
+      '<span class="sp-ev">' + st.line + "行目・" + (evMap[st.event] || st.event) + "</span>";
+
+    const prev = spIdx > 0 ? spSteps[spIdx - 1] : null;
+    const prevLocals = (prev && prev.func === st.func) ? prev.locals : {};
+    const keys = Object.keys(st.locals);
+    spVars.innerHTML = "";
+    if (!keys.length) {
+      spVars.style.display = "none";
+      spEmpty.style.display = "block";
+    } else {
+      spEmpty.style.display = "none";
+      spVars.style.display = "flex";
+      keys.forEach(function (k) {
+        const cv = JSON.stringify(st.locals[k]);
+        const ov = prevLocals[k] !== undefined ? JSON.stringify(prevLocals[k]) : undefined;
+        let cls = "sp-var", tag = "";
+        if (ov === undefined) { cls += " new"; tag = "new"; }
+        else if (ov !== cv)   { cls += " chg"; tag = "changed"; }
+        const d = document.createElement("div");
+        d.className = cls;
+        d.innerHTML =
+          '<span class="sp-k">' + spEscHtml(k) + "</span>" +
+          '<span class="sp-eq"> = </span>' +
+          '<span class="sp-v">' + spValHtml(st.locals[k]) + "</span>" +
+          (tag ? '<span class="sp-tag">' + tag + "</span>" : "");
+        spVars.appendChild(d);
+      });
+    }
+
+    const outSlice = spOutput.slice(0, st.out);
+    spOutbox.style.display = outSlice.length ? "block" : "none";
+    if (outSlice.length) spOutpre.textContent = outSlice;
+
+    spSlider.value = spIdx;
+    spPrev.disabled = spIdx === 0;
+    spNext.disabled = spIdx === spSteps.length - 1;
+  }
+
+  function spStopPlay() {
+    if (spPlayTimer) {
+      clearInterval(spPlayTimer);
+      spPlayTimer = null;
+      spPlay.textContent = "▶ 自動";
+    }
+  }
+
+  const TRACE_PY = [
+    "import sys, io, json, math",
+    "def _snap(v, d=0):",
+    "    if d>4: return {'t':'repr','v':repr(v)[:80]}",
+    "    if v is None: return {'t':'none','v':'None'}",
+    "    if isinstance(v,bool): return {'t':'bool','v':str(v)}",
+    "    if isinstance(v,int): return {'t':'num','v':str(v)}",
+    "    if isinstance(v,float): return {'t':'num','v':(repr(v) if math.isfinite(v) else 'inf/nan')}",
+    "    if isinstance(v,str): return {'t':'str','v':v[:120]}",
+    "    if isinstance(v,list): return {'t':'list','v':[_snap(x,d+1) for x in v[:60]]}",
+    "    if isinstance(v,tuple): return {'t':'tuple','v':[_snap(x,d+1) for x in v[:60]]}",
+    "    if isinstance(v,set): return {'t':'set','v':[_snap(x,d+1) for x in list(v)[:60]]}",
+    "    if isinstance(v,dict): return {'t':'dict','v':[[_snap(k,d+1),_snap(val,d+1)] for k,val in list(v.items())[:60]]}",
+    "    return {'t':'repr','v':repr(v)[:80]}",
+    "def run_trace(src):",
+    "    steps=[]; buf=io.StringIO(); old=sys.stdout; sys.stdout=buf",
+    "    g={'__name__':'__main__'}; MAX=4000",
+    "    def tr(frame, event, arg):",
+    "        if frame.f_code.co_filename!='<user>': return tr",
+    "        if event in ('line','call','return') and len(steps)<MAX:",
+    "            loc={k:_snap(val) for k,val in frame.f_locals.items() if not k.startswith('__')}",
+    "            steps.append({'line':frame.f_lineno,'event':event,'func':frame.f_code.co_name,'locals':loc,'out':len(buf.getvalue())})",
+    "        return tr",
+    "    err=None",
+    "    try: code=compile(src,'<user>','exec'); sys.settrace(tr); exec(code,g)",
+    "    except Exception as e: err='%s: %s'%(type(e).__name__,e)",
+    "    finally: sys.settrace(None); sys.stdout=old",
+    "    return json.dumps({'steps':steps,'output':buf.getvalue(),'error':err}, ensure_ascii=False)",
+  ].join("\n");
+
+  spRunBtn.addEventListener("click", async function () {
+    if (!pyodide) {
+      spErrbox.style.display = "block";
+      spErrbox.textContent = "⚠ Python環境の準備中です。少し待ってから再度お試しください。";
+      return;
+    }
+    spStopPlay();
+    spRunBtn.disabled = true;
+    spErrbox.style.display = "none";
+
+    try {
+      if (!traceReady) {
+        await pyodide.runPythonAsync(TRACE_PY);
+        traceReady = true;
+      }
+      const src = spEd.value;
+      spSrcLines = src.split("\n");
+      const raw = await pyodide.runPythonAsync("run_trace(" + JSON.stringify(src) + ")");
+      const data = JSON.parse(raw);
+      spSteps  = data.steps  || [];
+      spOutput = data.output || "";
+      spBuildCodeView();
+      if (data.error) {
+        spErrbox.style.display = "block";
+        spErrbox.textContent = "⚠ " + data.error + "\n（落ちた直前までの変数は下で確認できます）";
+      }
+      if (!spSteps.length) {
+        spStepperCtrl.style.display = "none";
+        spScope.style.display       = "none";
+        spVars.style.display        = "none";
+        spEmpty.style.display       = "none";
+        spOutbox.style.display      = "none";
+      } else {
+        spSlider.max   = spSteps.length - 1;
+        spSlider.value = 0;
+        spIdx = 0;
+        spStepperCtrl.style.display = "flex";
+        spRender();
+      }
+    } catch (err) {
+      spErrbox.style.display = "block";
+      spErrbox.textContent = String(err && err.message ? err.message : err);
+    } finally {
+      spRunBtn.disabled = false;
+    }
+  });
+
+  spPlay.addEventListener("click", function () {
+    if (spPlayTimer) { spStopPlay(); return; }
+    if (spIdx >= spSteps.length - 1) { spIdx = 0; spRender(); }
+    spPlay.textContent = "⏸ 停止";
+    spPlayTimer = setInterval(function () {
+      if (spIdx < spSteps.length - 1) { spIdx++; spRender(); }
+      else spStopPlay();
+    }, 750);
+  });
+
+  spSlider.addEventListener("input",  function () { spStopPlay(); spIdx = +spSlider.value; spRender(); });
+  spPrev.addEventListener("click",    function () { spStopPlay(); if (spIdx > 0) { spIdx--; spRender(); } });
+  spNext.addEventListener("click",    function () { spStopPlay(); if (spIdx < spSteps.length - 1) { spIdx++; spRender(); } });
+
+  // Pyodide 準備完了後に実行ボタンを有効化する（init() を変更せず MutationObserver で検知）
+  (function () {
+    if (pyodide !== null) { spRunBtn.disabled = false; return; }
+    const obs = new MutationObserver(function () {
+      if (pyodide !== null) { spRunBtn.disabled = false; obs.disconnect(); }
+    });
+    obs.observe(els.overlay, { attributes: true });
+  })();
 
   // ---- 起動 ----
   if (PROBLEMS.length > 0) showProblem(PROBLEMS[0]);

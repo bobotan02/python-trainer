@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>コード ステップ実行</title>
+<style>
+  :root{
+    --bg:#0c0e13; --card:#151922; --line:#272d39; --ink:#e7ebf3; --dim:#838c9d;
+    --hl:#fbbf24; --hl-bg:rgba(251,191,36,.13); --cyan:#56c7ff; --green:#5ee08a; --pink:#ff7eb6;
+    --str:#9ee493; --num:#7cc7ff; --none:#9aa3b2; --new:#5ee08a; --chg:#fbbf24;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);max-width:720px;margin:0 auto;padding:14px 13px 36px;
+    font-family:"Hiragino Kaku Gothic ProN",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  h1{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:600;margin:2px 0 3px;}
+  .sub{font-size:11px;color:var(--dim);margin-bottom:6px;}
+  .privacy{font-size:10.5px;color:var(--green);background:rgba(94,224,138,.08);border:1px solid rgba(94,224,138,.25);
+    border-radius:8px;padding:7px 10px;margin-bottom:12px;line-height:1.6;}
+
+  .status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);
+    background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--hl);flex:none;}
+  .dot.ready{background:var(--green);box-shadow:0 0 8px var(--green);}
+  .dot.busy{background:var(--cyan);animation:pulse 1s infinite;} .dot.err{background:#f87171;}
+  @keyframes pulse{50%{opacity:.3}}
+
+  .chips{display:flex;gap:6px;overflow-x:auto;margin-bottom:11px;padding-bottom:2px;}
+  .chip{flex:none;font-size:11.5px;padding:7px 12px;border-radius:20px;border:1px solid var(--line);
+    background:var(--card);color:var(--dim);cursor:pointer;white-space:nowrap;}
+  .chip.on{background:rgba(86,199,255,.14);border-color:rgba(86,199,255,.45);color:var(--cyan);}
+
+  textarea{width:100%;background:#0a0c10;color:#d6deea;border:1px solid var(--line);border-radius:11px;
+    padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;min-height:140px;tab-size:4;
+    font-family:"SF Mono",ui-monospace,monospace;outline:none;}
+  textarea:focus{border-color:#3a4150;}
+  .runrow{display:flex;gap:8px;margin:9px 0 14px;}
+  .runrow button{height:42px;border-radius:11px;cursor:pointer;font-size:12.5px;font-family:inherit;font-weight:700;border:1px solid var(--line);}
+  .runrow .go{flex:1;background:rgba(94,224,138,.14);border-color:rgba(94,224,138,.4);color:var(--green);}
+  .runrow .go:disabled{opacity:.4;}
+
+  .codeview{background:#0a0c10;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:11px;display:none;}
+  .cline{display:flex;font-size:12.5px;line-height:1.7;font-family:"SF Mono",monospace;}
+  .cline .ln{width:34px;flex:none;text-align:right;padding-right:10px;color:#4a5160;user-select:none;}
+  .cline .code{white-space:pre;padding-right:12px;color:#c8d1de;}
+  .cline.active{background:var(--hl-bg);} .cline.active .code{color:#fff;} .cline.active .ln{color:var(--hl);font-weight:700;}
+
+  .stepper{display:none;align-items:center;gap:9px;margin-bottom:13px;}
+  .stepper button{height:42px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;cursor:pointer;flex:none;padding:0 14px;}
+  .stepper button.play{color:var(--green);border-color:rgba(94,224,138,.4);}
+  .stepper button:disabled{opacity:.35;}
+  .stepper input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:4px;background:#2a313d;outline:none;}
+  .stepper input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--hl);cursor:pointer;}
+  .stepper .lbl{font-size:11px;color:var(--dim);min-width:60px;text-align:right;} .stepper .lbl b{color:var(--ink);}
+
+  .scope{display:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:7px;}
+  .scope .ev{color:var(--dim);text-transform:none;letter-spacing:0;margin-left:6px;}
+  .vars{display:none;flex-direction:column;gap:7px;margin-bottom:12px;}
+  .var{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;display:flex;gap:10px;align-items:baseline;font-size:12.5px;transition:.15s;}
+  .var.chg{border-color:var(--chg);background:rgba(251,191,36,.07);} .var.new{border-color:var(--new);background:rgba(94,224,138,.07);}
+  .var .k{color:var(--pink);font-family:"SF Mono",monospace;font-weight:600;flex:none;}
+  .var .eq{color:var(--dim);flex:none;} .var .v{font-family:"SF Mono",monospace;word-break:break-word;}
+  .var .tag{margin-left:auto;font-size:9px;color:var(--dim);flex:none;align-self:center;}
+  .var.new .tag{color:var(--new)} .var.chg .tag{color:var(--chg)}
+  .v-str{color:var(--str)} .v-num{color:var(--num)} .v-none{color:var(--none)} .v-bool{color:#d8b4fe} .v-bracket{color:#7a8290}
+  .empty{display:none;font-size:12px;color:var(--dim);padding:6px 2px;}
+  .outbox{display:none;background:#0a0c10;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+  .outbox .h{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
+  .outbox pre{margin:0;font-size:11.5px;color:#9ee493;white-space:pre-wrap;font-family:"SF Mono",monospace;min-height:16px;}
+  pre.errbox{display:none;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#fca5a5;border-radius:9px;padding:10px 12px;font-size:11.5px;white-space:pre-wrap;font-family:"SF Mono",monospace;}
+  .hint{font-size:10.5px;color:var(--dim);text-align:center;margin-top:14px;line-height:1.6;} .hint b{color:var(--chg)} .hint i{color:var(--new);font-style:normal}
+</style>
+</head>
+<body>
+  <h1>コード ステップ実行</h1>
+  <div class="sub">入力したコードが1行ずつどう動くか・変数がどう変わるかを見る。<span style="color:var(--chg)">黄＝変化</span> / <span style="color:var(--green)">緑＝新規</span></div>
+  <div class="privacy">🔒 コードはこのブラウザ内（Pyodide / WebAssembly）だけで実行されます。サーバーにもAIにも送信されず、保存も学習もされません。※それでも公開端末では本物のAPIキー等は貼らない運用を推奨します。</div>
+
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Pythonを準備中…（初回のみ20〜40秒）</span></div>
+
+  <div class="chips" id="chips"></div>
+  <textarea id="ed" spellcheck="false" placeholder="ここにPythonコードを書いて「ステップ実行」を押す"></textarea>
+  <div class="runrow"><button class="go" id="runBtn" disabled>▶ ステップ実行</button></div>
+
+  <div class="codeview" id="codeview"></div>
+  <div class="stepper" id="stepper">
+    <button id="prev">◀</button><button class="play" id="play">▶ 自動</button>
+    <input type="range" id="slider" min="0" max="0" value="0"><button id="next">▶</button>
+    <span class="lbl" id="stepLbl"><b>0</b>/0</span>
+  </div>
+  <div class="scope" id="scope"></div>
+  <div class="vars" id="vars"></div>
+  <div class="empty" id="empty">この時点ではまだ変数がありません</div>
+  <div class="outbox" id="outbox"><div class="h">PRINT 出力（この行まで）</div><pre id="outpre"></pre></div>
+  <pre class="errbox" id="errbox"></pre>
+  <div class="hint" id="hint"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pyodide/0.28.3/pyodide.js"></script>
+<script>
+(()=>{
+  "use strict";
+  let pyodide=null, steps=[], output="", idx=0, srcLines=[], playTimer=null;
+
+  const SAMPLES=[
+    {name:'辞書ループ', code:'scores = {"math": 80, "english": 65}\n\nfor subject, point in scores.items():\n    grade = "A" if point >= 80 else "B"\n    print(subject, grade)'},
+    {name:'関数とスコープ', code:'def add_tax(price, rate=0.1):\n    tax = price * rate\n    return price + tax\n\ntotal = 0\nfor p in [100, 250]:\n    total += add_tax(p)\nprint(round(total, 1))'},
+    {name:'参照の落とし穴', code:'a = [1, 2, 3]\nb = a\nb.append(99)\nc = a.copy()\nc.append(0)\nprint("a =", a)\nprint("c =", c)'},
+    {name:'辞書で数える', code:'words = ["a", "b", "a", "c", "b", "a"]\ncount = {}\nfor w in words:\n    count[w] = count.get(w, 0) + 1\nprint(count)'},
+  ];
+
+  const chips=document.getElementById('chips');
+  SAMPLES.forEach((s,i)=>{ const c=document.createElement('div'); c.className='chip';
+    c.textContent=s.name; c.onclick=()=>{ ed.value=s.code; }; chips.appendChild(c); });
+  const ed=document.getElementById('ed'), dot=document.getElementById('dot'), statusText=document.getElementById('statusText');
+  const runBtn=document.getElementById('runBtn'), codeview=document.getElementById('codeview');
+  const stepper=document.getElementById('stepper'), slider=document.getElementById('slider'),
+        prevB=document.getElementById('prev'), nextB=document.getElementById('next'), playB=document.getElementById('play'), stepLbl=document.getElementById('stepLbl');
+  const scopeEl=document.getElementById('scope'), varsEl=document.getElementById('vars'), emptyEl=document.getElementById('empty');
+  const outbox=document.getElementById('outbox'), outpre=document.getElementById('outpre'), errbox=document.getElementById('errbox'), hint=document.getElementById('hint');
+  ed.value=SAMPLES[0].code;
+
+  ed.addEventListener('keydown',e=>{ if(e.key==='Tab'){ e.preventDefault(); const s=ed.selectionStart;
+    ed.value=ed.value.slice(0,s)+'    '+ed.value.slice(ed.selectionEnd); ed.selectionStart=ed.selectionEnd=s+4; }});
+
+  async function boot(){
+    try{
+      pyodide=await loadPyodide({ indexURL:"https://cdnjs.cloudflare.com/ajax/libs/pyodide/0.28.3/" });
+      await pyodide.runPythonAsync(`
+import sys, io, json, math
+def _snap(v, d=0):
+    if d>4: return {"t":"repr","v":repr(v)[:80]}
+    if v is None: return {"t":"none","v":"None"}
+    if isinstance(v,bool): return {"t":"bool","v":str(v)}
+    if isinstance(v,int): return {"t":"num","v":str(v)}
+    if isinstance(v,float): return {"t":"num","v":(repr(v) if math.isfinite(v) else "inf/nan")}
+    if isinstance(v,str): return {"t":"str","v":v[:120]}
+    if isinstance(v,list): return {"t":"list","v":[_snap(x,d+1) for x in v[:60]]}
+    if isinstance(v,tuple): return {"t":"tuple","v":[_snap(x,d+1) for x in v[:60]]}
+    if isinstance(v,set): return {"t":"set","v":[_snap(x,d+1) for x in list(v)[:60]]}
+    if isinstance(v,dict): return {"t":"dict","v":[[_snap(k,d+1),_snap(val,d+1)] for k,val in list(v.items())[:60]]}
+    return {"t":"repr","v":repr(v)[:80]}
+def run_trace(src):
+    steps=[]; buf=io.StringIO(); old=sys.stdout; sys.stdout=buf
+    g={"__name__":"__main__"}; MAX=4000
+    def tr(frame, event, arg):
+        if frame.f_code.co_filename!="<user>": return tr
+        if event in ("line","call","return") and len(steps)<MAX:
+            loc={k:_snap(val) for k,val in frame.f_locals.items() if not k.startswith("__")}
+            steps.append({"line":frame.f_lineno,"event":event,"func":frame.f_code.co_name,"locals":loc,"out":len(buf.getvalue())})
+        return tr
+    err=None
+    try: code=compile(src,"<user>","exec"); sys.settrace(tr); exec(code,g)
+    except Exception as e: err="%s: %s"%(type(e).__name__,e)
+    finally: sys.settrace(None); sys.stdout=old
+    return json.dumps({"steps":steps,"output":buf.getvalue(),"error":err}, ensure_ascii=False)
+`);
+      dot.className="dot ready"; statusText.textContent="準備完了 — 実行できます"; runBtn.disabled=false;
+    }catch(err){ dot.className="dot err"; statusText.textContent="ランタイム読込失敗: "+(err&&err.message?err.message.slice(0,70):err); runBtn.disabled=true; }
+  }
+  boot();
+
+  runBtn.onclick=async ()=>{
+    if(!pyodide) return; stopPlay();
+    dot.className="dot busy"; statusText.textContent="トレース中…"; runBtn.disabled=true;
+    const src=ed.value; srcLines=src.split("\n");
+    try{
+      const raw=await pyodide.runPythonAsync(`run_trace(${JSON.stringify(src)})`);
+      const data=JSON.parse(raw); steps=data.steps||[]; output=data.output||"";
+      buildCodeView();
+      errbox.style.display = data.error?'block':'none';
+      if(data.error) errbox.textContent="⚠ "+data.error+"\n（落ちた直前までの変数は下で確認できます）";
+      if(steps.length===0){ stepper.style.display='none'; statusText.textContent="実行行がありませんでした"; }
+      else{ slider.max=steps.length-1; slider.value=0; idx=0; stepper.style.display='flex'; render(); }
+      hint.innerHTML='◀▶ / スライダー / ▶自動 で進める。<b>黄</b>＝変化 / <i>緑</i>＝新規。';
+      dot.className="dot ready"; statusText.textContent=`完了 — ${steps.length} ステップ`;
+    }catch(err){ dot.className="dot err"; statusText.textContent="エラー"; errbox.style.display='block'; errbox.textContent=String(err.message||err); }
+    finally{ runBtn.disabled=false; }
+  };
+
+  function escapeHtml(s){ return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  function buildCodeView(){ codeview.innerHTML='';
+    srcLines.forEach((ln,i)=>{ const r=document.createElement('div'); r.className='cline'; r.dataset.line=i+1;
+      r.innerHTML='<span class="ln">'+(i+1)+'</span><span class="code">'+(escapeHtml(ln)||' ')+'</span>'; codeview.appendChild(r); });
+    codeview.style.display='block'; }
+  function valHtml(o){ if(!o) return '';
+    switch(o.t){
+      case 'str': return '<span class="v-str">"'+escapeHtml(o.v)+'"</span>';
+      case 'num': return '<span class="v-num">'+escapeHtml(o.v)+'</span>';
+      case 'bool': return '<span class="v-bool">'+o.v+'</span>';
+      case 'none': return '<span class="v-none">None</span>';
+      case 'list': return '<span class="v-bracket">[</span>'+o.v.map(valHtml).join('<span class="v-bracket">, </span>')+'<span class="v-bracket">]</span>';
+      case 'tuple': return '<span class="v-bracket">(</span>'+o.v.map(valHtml).join('<span class="v-bracket">, </span>')+'<span class="v-bracket">)</span>';
+      case 'set': return '<span class="v-bracket">{</span>'+o.v.map(valHtml).join('<span class="v-bracket">, </span>')+'<span class="v-bracket">}</span>';
+      case 'dict': return '<span class="v-bracket">{</span>'+o.v.map(p=>valHtml(p[0])+'<span class="v-bracket">: </span>'+valHtml(p[1])).join('<span class="v-bracket">, </span>')+'<span class="v-bracket">}</span>';
+      default: return '<span class="v-none">'+escapeHtml(o.v)+'</span>';
+    }}
+  function render(){ if(!steps.length) return; const st=steps[idx];
+    stepLbl.innerHTML='<b>'+(idx+1)+'</b>/'+steps.length;
+    [...codeview.children].forEach(r=>r.classList.toggle('active',(+r.dataset.line)===st.line));
+    const a=codeview.querySelector('.cline.active'); if(a) a.scrollIntoView({block:'nearest'});
+    scopeEl.style.display='block'; const ev={line:'実行',call:'関数に入る ↓',return:'戻る ↑'};
+    scopeEl.innerHTML=(st.func==='<module>'?'スコープ: グローバル':'スコープ: '+st.func+'()')+'<span class="ev">'+st.line+'行目・'+(ev[st.event]||st.event)+'</span>';
+    const prev=idx>0?steps[idx-1]:null; const pl=(prev&&prev.func===st.func)?prev.locals:{};
+    const keys=Object.keys(st.locals); varsEl.innerHTML='';
+    if(!keys.length){ varsEl.style.display='none'; emptyEl.style.display='block'; }
+    else{ emptyEl.style.display='none'; varsEl.style.display='flex';
+      keys.forEach(k=>{ const cv=JSON.stringify(st.locals[k]); const ov=pl[k]!==undefined?JSON.stringify(pl[k]):undefined;
+        let cls='var',tag=''; if(ov===undefined){cls+=' new';tag='new';} else if(ov!==cv){cls+=' chg';tag='changed';}
+        const d=document.createElement('div'); d.className=cls;
+        d.innerHTML='<span class="k">'+escapeHtml(k)+'</span><span class="eq">=</span><span class="v">'+valHtml(st.locals[k])+'</span>'+(tag?'<span class="tag">'+tag+'</span>':'');
+        varsEl.appendChild(d); }); }
+    const o=output.slice(0,st.out); if(o.length){ outbox.style.display='block'; outpre.textContent=o; } else outbox.style.display='none';
+    slider.value=idx; prevB.disabled=idx===0; nextB.disabled=idx===steps.length-1; }
+  function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; playB.textContent='▶ 自動'; } }
+  playB.onclick=()=>{ if(playTimer){stopPlay();return;} if(idx>=steps.length-1){idx=0;render();}
+    playB.textContent='⏸ 停止'; playTimer=setInterval(()=>{ if(idx<steps.length-1){idx++;render();} else stopPlay(); },750); };
+  slider.oninput=()=>{ stopPlay(); idx=+slider.value; render(); };
+  prevB.onclick=()=>{ stopPlay(); if(idx>0){idx--;render();} };
+  nextB.onclick=()=>{ stopPlay(); if(idx<steps.length-1){idx++;render();} };
+})();
+</script>
+</body>
+</html>
