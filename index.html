@@ -293,6 +293,8 @@
   details.explanation { display: none; border-top: 1px dashed var(--border); margin-top: 4px; padding-top: 10px; }
   details.explanation summary { cursor: pointer; color: var(--purple); font-weight: bold; user-select: none; }
   #explanation-body { white-space: pre-wrap; color: var(--text); font-size: 0.92rem; margin-top: 10px; }
+  #error-explain-body, #sp-error-explain-body { color: var(--text); font-size: 0.92rem; margin-top: 10px; line-height: 1.7; }
+  #error-explain-body code, #sp-error-explain-body code { font-family: var(--mono); background: var(--bg-input); padding: 1px 4px; border-radius: 3px; font-size: 0.88em; }
 
   /* ローディングオーバーレイ */
   #loading-overlay {
@@ -496,6 +498,10 @@
     <details class="explanation" id="explanation-block">
       <summary>📘 解説</summary>
       <div id="explanation-body"></div>
+    </details>
+    <details class="explanation" id="error-explain-block">
+      <summary>📖 このエラーを読む</summary>
+      <div id="error-explain-body"></div>
     </details>
   </div>
 
@@ -841,6 +847,10 @@ df.sort_values("age", ascending=False)</pre>
     </div>
 
     <pre class="sp-errbox" id="sp-errbox" style="display:none;"></pre>
+    <details class="explanation" id="sp-error-explain-block" style="display:none;">
+      <summary>📖 このエラーを読む</summary>
+      <div id="sp-error-explain-body"></div>
+    </details>
 
   </div><!-- /#tab-stepper -->
 </div>
@@ -899,6 +909,8 @@ df.sort_values("age", ascending=False)</pre>
     expectedOutput: $("expected-output"),
     explanationBlock: $("explanation-block"),
     explanationBody: $("explanation-body"),
+    errorExplainBlock: $("error-explain-block"),
+    errorExplainBody: $("error-explain-body"),
     btnList: $("btn-list"),
     btnListClose: $("btn-list-close"),
     listOverlay: $("list-overlay"),
@@ -995,6 +1007,79 @@ df.sort_values("age", ascending=False)</pre>
     }
     els.editor.value = problem.starterCode || "";
     clearResult();
+    // ステッパーの「この問題の答え」チップを更新（chip生成後なら表示切替）
+    if (typeof spAnswerChip !== "undefined" && spAnswerChip) {
+      spAnswerChip.style.display = problem.answerCode ? "" : "none";
+      spAnswerChip.classList.remove("active");
+    }
+  }
+
+  // ---- エラーパターン解説 ----
+  const ERROR_PATTERNS = [
+    {
+      re: /NameError: name '(.+?)' is not defined/,
+      explain: function (m) { return "<b>NameError</b>（名前エラー）<br>「<code>" + m[1] + "</code>」という名前の変数・関数が見つかりません。<br><br><b>エラーメッセージの読み方：</b><br><code>name '" + m[1] + "' is not defined</code> →「'" + m[1] + "'という名前が定義されていない」<br><br><b>よくある原因：</b><br>・スペルミス（例: <code>scroe</code> と打っていないか）<br>・変数を定義する前に使っている<br>・関数の外で定義した変数を内部から参照しようとしている"; }
+    },
+    {
+      re: /TypeError: unsupported operand type\(s\) for (.+?): '(.+?)' and '(.+?)'/,
+      explain: function (m) { return "<b>TypeError</b>（型エラー）<br><code>" + m[2] + "</code> 型と <code>" + m[3] + "</code> 型の間で <code>" + m[1] + "</code> 演算はできません。<br><br><b>エラーメッセージの読み方：</b><br><code>unsupported operand type(s) for " + m[1] + "</code> →「" + m[1] + "演算子に対応していない型の組み合わせ」<br><br><b>よくある原因：</b><br>・文字列と数値を直接足そうとしている（<code>str(数値)</code> か <code>int(文字列)</code> で変換が必要）<br>・CSVや入力から読んだ値はすべて文字列なので、計算前に型変換を忘れずに"; }
+    },
+    {
+      re: /TypeError: can only concatenate (\w+) \(not "(.+?)"\) to \1/,
+      explain: function (m) { return "<b>TypeError</b>（型エラー）<br><code>" + m[1] + "</code> に <code>" + m[2] + "</code> を <code>+</code> で連結することはできません。<br><br><b>エラーメッセージの読み方：</b><br><code>can only concatenate " + m[1] + " (not \"" + m[2] + "\") to " + m[1] + "</code><br>→「" + m[1] + "同士しか連結できない（" + m[2] + "は不可）」<br><br><b>よくある原因：</b><br>・数値を文字列に混ぜるときは <code>str(値)</code> か f文字列を使う"; }
+    },
+    {
+      re: /TypeError: '(.+?)' object is not callable/,
+      explain: function (m) { return "<b>TypeError</b>（型エラー）<br><code>" + m[1] + "</code> 型のオブジェクトは関数として呼び出せません。<br><br><b>エラーメッセージの読み方：</b><br><code>'" + m[1] + "' object is not callable</code> →「" + m[1] + "型のオブジェクトは呼び出せない」<br><br><b>よくある原因：</b><br>・変数名と関数名が衝突している（例: <code>list = [1,2,3]</code> の後に <code>list()</code> を呼ぶ）<br>・メソッドに <code>()</code> を付け忘れて変数として上書きしてしまった"; }
+    },
+    {
+      re: /TypeError: (.+?)\(\) takes (\d+) positional argument/,
+      explain: function (m) { return "<b>TypeError</b>（型エラー）<br><code>" + m[1] + "()</code> に渡した引数の数が間違っています（定義では " + m[2] + " 個）。<br><br><b>エラーメッセージの読み方：</b><br><code>takes N positional argument(s)</code> →「N個の引数を受け取るが、違う数が渡された」<br><br><b>よくある原因：</b><br>・引数の個数と関数定義の <code>def</code> を見比べる<br>・メソッドでは <code>self</code> が暗黙で渡されるため、定義と呼び出しで数が1つずれて見える場合がある"; }
+    },
+    {
+      re: /IndexError: list index out of range/,
+      explain: function () { return "<b>IndexError</b>（インデックスエラー）<br>リストの存在しない位置にアクセスしようとしました。<br><br><b>エラーメッセージの読み方：</b><br><code>list index out of range</code> →「リストのインデックスが範囲外」<br><br><b>よくある原因：</b><br>・インデックスは0始まり（3要素なら 0・1・2 まで）<br>・<code>len(リスト) - 1</code> が最後のインデックス<br>・ループ内で範囲を超えていないか確認する"; }
+    },
+    {
+      re: /KeyError: '?(.+?)'?$/,
+      explain: function (m) { return "<b>KeyError</b>（キーエラー）<br>辞書に <code>'" + m[1] + "'</code> というキーが存在しません。<br><br><b>エラーメッセージの読み方：</b><br><code>KeyError: '" + m[1] + "'</code> →「'" + m[1] + "'というキーが辞書にない」<br><br><b>よくある原因：</b><br>・キー名のスペルミス<br>・存在しないキーへのアクセスは <code>辞書.get('" + m[1] + "', デフォルト値)</code> で安全に書ける<br>・キー一覧は <code>print(辞書.keys())</code> で確認できる"; }
+    },
+    {
+      re: /ValueError: invalid literal for int\(\) with base \d+: '(.+?)'/,
+      explain: function (m) { return "<b>ValueError</b>（値エラー）<br><code>'" + m[1] + "'</code> は整数に変換できません。<br><br><b>エラーメッセージの読み方：</b><br><code>invalid literal for int() with base 10: '" + m[1] + "'</code><br>→「'" + m[1] + "'はint()で変換できない文字列」<br><br><b>よくある原因：</b><br>・数字以外の文字（スペース・記号・アルファベット）が混ざっている<br>・変換前に <code>strip()</code> で前後の空白を除去すると解決することがある<br>・変換できるか不安なときは <code>try / except ValueError</code> で囲む"; }
+    },
+    {
+      re: /AttributeError: '(.+?)' object has no attribute '(.+?)'/,
+      explain: function (m) { return "<b>AttributeError</b>（属性エラー）<br><code>" + m[1] + "</code> 型に <code>." + m[2] + "</code> というメソッド・属性はありません。<br><br><b>エラーメッセージの読み方：</b><br><code>'" + m[1] + "' object has no attribute '" + m[2] + "'</code><br>→「" + m[1] + "型のオブジェクトに" + m[2] + "という属性がない」<br><br><b>よくある原因：</b><br>・メソッド名のスペルミス（例: <code>.apend()</code> → <code>.append()</code>）<br>・型が想定と違う（例: リストのつもりが None になっている）<br>・<code>sort()</code> などリスト専用メソッドを文字列に使っている"; }
+    },
+    {
+      re: /ZeroDivisionError: division by zero/,
+      explain: function () { return "<b>ZeroDivisionError</b>（ゼロ除算エラー）<br>0で割り算をしようとしました。<br><br><b>エラーメッセージの読み方：</b><br><code>division by zero</code> →「ゼロで割った」<br><br><b>よくある原因：</b><br>・分母が0になるケースを考慮していない<br>・<code>if 分母 != 0:</code> で事前チェックするか、<code>try / except ZeroDivisionError</code> で囲む"; }
+    },
+    {
+      re: /RecursionError: maximum recursion depth exceeded/,
+      explain: function () { return "<b>RecursionError</b>（再帰エラー）<br>再帰の呼び出しが深くなりすぎました（デフォルト上限は約1000回）。<br><br><b>エラーメッセージの読み方：</b><br><code>maximum recursion depth exceeded</code> →「最大再帰深度を超えた」<br><br><b>よくある原因：</b><br>・再帰関数の終了条件（ベースケース）が間違っている・抜けている<br>・<code>if n &lt;= 1: return ...</code> のような終了条件が最初に来ているか確認する"; }
+    },
+    {
+      re: /IndentationError: (.+)/,
+      explain: function (m) { return "<b>IndentationError</b>（インデントエラー）<br>インデント（字下げ）に問題があります：<code>" + m[1] + "</code><br><br><b>エラーメッセージの読み方：</b><br><code>IndentationError</code> →「インデントが正しくない」<br><br><b>よくある原因：</b><br>・<code>if</code> / <code>for</code> / <code>def</code> の次の行を字下げ（4スペース）していない<br>・スペースとタブが混在している<br>・ブロックの終わりで字下げを戻し忘れている"; }
+    },
+    {
+      re: /UnboundLocalError: local variable '(.+?)' referenced before assignment/,
+      explain: function (m) { return "<b>UnboundLocalError</b>（未束縛ローカル変数エラー）<br>関数内で <code>" + m[1] + "</code> に値を代入する前に参照しています。<br><br><b>エラーメッセージの読み方：</b><br><code>local variable '" + m[1] + "' referenced before assignment</code><br>→「ローカル変数'" + m[1] + "'が代入される前に参照された」<br><br><b>よくある原因：</b><br>・関数の外にある同名の変数を読もうとしているが、関数内でも代入があるため「ローカル変数」と判断された<br>・関数内で使う外側の変数は引数として渡すか、関数内で定義し直すのが基本"; }
+    },
+    {
+      re: /SyntaxError: (.+)/,
+      explain: function (m) { return "<b>SyntaxError</b>（構文エラー）<br>Pythonのルールに沿っていないコードがあります：<code>" + m[1] + "</code><br><br><b>エラーメッセージの読み方：</b><br><code>SyntaxError</code> →「文法が間違っている」（実行前に検出される）<br><br><b>よくある原因：</b><br>・<code>if</code> / <code>for</code> / <code>def</code> の末尾の <code>:</code> 忘れ<br>・括弧・クォートの閉じ忘れ<br>・<code>=</code>（代入）と <code>==</code>（比較）の混同"; }
+    },
+  ];
+
+  function buildErrorExplain(errorMessage) {
+    for (var i = 0; i < ERROR_PATTERNS.length; i++) {
+      var m = errorMessage.match(ERROR_PATTERNS[i].re);
+      if (m) return ERROR_PATTERNS[i].explain(m);
+    }
+    return null;
   }
 
   function clearResult() {
@@ -1005,10 +1090,12 @@ df.sort_values("age", ascending=False)</pre>
     els.expectedBlock.style.display = "none";
     els.explanationBlock.style.display = "none";
     els.explanationBlock.open = false;
+    els.errorExplainBlock.style.display = "none";
+    els.errorExplainBlock.open = false;
   }
 
   // ---- 判定結果の表示 ----
-  function showResult(kind, message) {
+  function showResult(kind, message, errorText) {
     els.resultBanner.className = kind; // correct / wrong / error
     els.resultBanner.textContent = message;
 
@@ -1017,6 +1104,20 @@ df.sort_values("age", ascending=False)</pre>
 
     // 解説は正解・不正解・エラーのいずれでも折りたたみで表示する
     els.explanationBlock.open = false;
+
+    // エラーのときのみエラー解説を表示
+    if (kind === "error" && errorText) {
+      var html = buildErrorExplain(errorText);
+      if (html) {
+        els.errorExplainBody.innerHTML = html;
+        els.errorExplainBlock.style.display = "block";
+        els.errorExplainBlock.open = false;
+      } else {
+        els.errorExplainBlock.style.display = "none";
+      }
+    } else {
+      els.errorExplainBlock.style.display = "none";
+    }
 
     if (kind === "wrong") {
       // 不正解時のみ期待される出力を表示
@@ -1136,10 +1237,10 @@ df.sort_values("age", ascending=False)</pre>
       }
     } catch (err) {
       const partial = stdoutLines.join("\n");
+      const errText = errorToText(err);
       els.output.classList.add("error-text");
-      els.output.textContent =
-        (partial ? partial + "\n" : "") + errorToText(err);
-      showResult("error", "⚠️ エラー — コードの実行中に例外が発生しました。エラーメッセージを読んで修正しましょう。");
+      els.output.textContent = (partial ? partial + "\n" : "") + errText;
+      showResult("error", "⚠️ エラー — コードの実行中に例外が発生しました。エラーメッセージを読んで修正しましょう。", errText);
     } finally {
       namespace.destroy();
       running = false;
@@ -1289,25 +1390,42 @@ df.sort_values("age", ascending=False)</pre>
     { name: "辞書で数える",   code: 'words = ["a", "b", "a", "c", "b", "a"]\ncount = {}\nfor w in words:\n    count[w] = count.get(w, 0) + 1\nprint(count)' },
   ];
 
-  const spEd         = $("sp-ed");
-  const spRunBtn     = $("sp-run-btn");
-  const spCodeview   = $("sp-codeview");
-  const spStepperCtrl= $("sp-stepper");
-  const spSlider     = $("sp-slider");
-  const spPrev       = $("sp-prev");
-  const spNext       = $("sp-next");
-  const spPlay       = $("sp-play");
-  const spStepLbl    = $("sp-step-lbl");
-  const spScope      = $("sp-scope");
-  const spVars       = $("sp-vars");
-  const spEmpty      = $("sp-empty");
-  const spOutbox     = $("sp-outbox");
-  const spOutpre     = $("sp-outpre");
-  const spErrbox     = $("sp-errbox");
+  const spEd              = $("sp-ed");
+  const spRunBtn          = $("sp-run-btn");
+  const spCodeview        = $("sp-codeview");
+  const spStepperCtrl     = $("sp-stepper");
+  const spSlider          = $("sp-slider");
+  const spPrev            = $("sp-prev");
+  const spNext            = $("sp-next");
+  const spPlay            = $("sp-play");
+  const spStepLbl         = $("sp-step-lbl");
+  const spScope           = $("sp-scope");
+  const spVars            = $("sp-vars");
+  const spEmpty           = $("sp-empty");
+  const spOutbox          = $("sp-outbox");
+  const spOutpre          = $("sp-outpre");
+  const spErrbox          = $("sp-errbox");
+  const spErrorExplainBlock = $("sp-error-explain-block");
+  const spErrorExplainBody  = $("sp-error-explain-body");
 
-  // サンプルボタン生成
+  // サンプルボタン生成（先頭に「この問題の答え」チップを追加）
+  var spAnswerChip = null;
   (function () {
     const container = $("sp-samples");
+
+    // 先頭: この問題の答えチップ（currentProblem が設定されたら表示）
+    spAnswerChip = document.createElement("button");
+    spAnswerChip.className = "filter-btn";
+    spAnswerChip.textContent = "📝 この問題の答え";
+    spAnswerChip.style.display = "none";
+    spAnswerChip.addEventListener("click", function () {
+      if (!currentProblem || !currentProblem.answerCode) return;
+      container.querySelectorAll(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
+      spAnswerChip.classList.add("active");
+      spEd.value = currentProblem.answerCode;
+    });
+    container.appendChild(spAnswerChip);
+
     SP_SAMPLES.forEach(function (s, i) {
       const btn = document.createElement("button");
       btn.className = "filter-btn" + (i === 0 ? " active" : "");
@@ -1466,6 +1584,7 @@ df.sort_values("age", ascending=False)</pre>
     spStopPlay();
     spRunBtn.disabled = true;
     spErrbox.style.display = "none";
+    spErrorExplainBlock.style.display = "none";
 
     try {
       if (!traceReady) {
@@ -1482,6 +1601,12 @@ df.sort_values("age", ascending=False)</pre>
       if (data.error) {
         spErrbox.style.display = "block";
         spErrbox.textContent = "⚠ " + data.error + "\n（落ちた直前までの変数は下で確認できます）";
+        var spErrHtml = buildErrorExplain(data.error);
+        if (spErrHtml) {
+          spErrorExplainBody.innerHTML = spErrHtml;
+          spErrorExplainBlock.style.display = "block";
+          spErrorExplainBlock.open = false;
+        }
       }
       if (!spSteps.length) {
         spStepperCtrl.style.display = "none";
@@ -1497,8 +1622,15 @@ df.sort_values("age", ascending=False)</pre>
         spRender();
       }
     } catch (err) {
+      const spCatchMsg = String(err && err.message ? err.message : err);
       spErrbox.style.display = "block";
-      spErrbox.textContent = String(err && err.message ? err.message : err);
+      spErrbox.textContent = spCatchMsg;
+      var spCatchHtml = buildErrorExplain(spCatchMsg);
+      if (spCatchHtml) {
+        spErrorExplainBody.innerHTML = spCatchHtml;
+        spErrorExplainBlock.style.display = "block";
+        spErrorExplainBlock.open = false;
+      }
     } finally {
       spRunBtn.disabled = false;
     }
