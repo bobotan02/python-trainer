@@ -394,7 +394,7 @@ const PROBLEMS = [
       "関数は def 関数名(引数): で定義し、return で値を返します。返すだけでは画面に表示されないので、printと組み合わせます。\n\n" +
       "よくある間違い:\n・関数の中で print してさらに print(greet(...)) すると「None」が余分に出力されます（return と print の役割の違いに注意）。\n・「！」が全角であることに注意してください。",
     hint: "def greet(name): で定義し、f文字列を return します。",
-    answerCode: "def greet(name):\n    return f\"こんにちは、{name}さん！\""
+    answerCode: "def greet(name):\n    return f\"こんにちは、{name}さん！\"\n\nprint(greet(\"花子\"))\nprint(greet(\"次郎\"))"
   },
   {
     id: "i004",
@@ -554,7 +554,7 @@ const PROBLEMS = [
       "引数に exp=2 のようにデフォルト値を設定すると、呼び出し時に省略できます。power(4) は exp が省略されたので 4 ** 2 = 16 になります。\n\n" +
       "よくある間違い:\n・デフォルト引数は通常の引数より後ろに書く必要があります。def power(exp=2, base): は SyntaxError です\n・べき乗の演算子は ** です（^ はべき乗ではなくビット演算なので注意）。",
     hint: "def power(base, exp=2): と定義し、base ** exp を返します。",
-    answerCode: "def power(base, exp=2):\n    return base ** exp"
+    answerCode: "def power(base, exp=2):\n    return base ** exp\n\nprint(power(4))\nprint(power(2, 10))"
   },
   {
     id: "i014",
@@ -570,7 +570,7 @@ const PROBLEMS = [
       "return A, B のようにカンマで並べると複数の値を返せます（実体はタプルです）。受け取る側も low, high = ... と書くと2つの変数に分けて代入できます（アンパック代入）。\n\n" +
       "よくある間違い:\n・result = min_max(...) と1つの変数で受けると result はタプル (3, 11) になります。print(result) では \"(3, 11)\" と表示されてしまいます。",
     hint: "return min(numbers), max(numbers) で2つの値を返し、low, high = で受け取ります。",
-    answerCode: "def min_max(numbers):\n    return min(numbers), max(numbers)"
+    answerCode: "def min_max(numbers):\n    return min(numbers), max(numbers)\n\nlow, high = min_max([8, 3, 11, 5])\nprint(low)\nprint(high)"
   },
   {
     id: "i015",
@@ -667,7 +667,7 @@ const PROBLEMS = [
       "「条件に合う要素だけの新しいリストを返す」処理は、内包表記の if を使うと1行で書けます。forループとappendで書いても正解です:\n\ndef pick_even(numbers):\n    result = []\n    for n in numbers:\n        if n % 2 == 0:\n            result.append(n)\n    return result\n\n" +
       "よくある間違い:\n・関数の中で print してしまい、None が余分に出力される（return で返してから呼び出し側で print します）。",
     hint: "内包表記 [n for n in numbers if n % 2 == 0] を return すると簡潔です。",
-    answerCode: "def pick_even(numbers):\n    return [n for n in numbers if n % 2 == 0]"
+    answerCode: "def pick_even(numbers):\n    return [n for n in numbers if n % 2 == 0]\n\nprint(pick_even([1, 2, 3, 4, 5, 6]))"
   },
 
   {
@@ -816,7 +816,7 @@ const PROBLEMS = [
       "json.loads() はJSON文字列をPythonの辞書・リストに変換します（loadsのsはstringの意味です）。APIのレスポンスや設定ファイルの読み取りなど、データを扱う仕事の最初の一歩になる操作です。\n\n" +
       "よくある間違い:\n・変換前の data は「ただの文字列」なので data[\"name\"] はエラーになります。必ず loads してからアクセスします\n・json.load()（sなし）はファイルオブジェクト用です。文字列には loads を使います。",
     hint: "server = json.loads(data) で辞書になります。あとは server[\"name\"] でアクセスできます。",
-    answerCode: "import json"
+    answerCode: "import json\n\ndata = '{\"name\": \"サーバーA\", \"cpu\": 4, \"memory\": 16}'\nserver = json.loads(data)\nprint(server[\"name\"])\nprint(server[\"cpu\"])"
   },
   {
     id: "i030",
@@ -832,7 +832,7 @@ const PROBLEMS = [
       "json.dumps() は loads の逆で、Pythonの辞書・リストをJSON文字列に変換します。APIへの送信やファイル保存の前に使う定番操作です。\n\n" +
       "よくある間違い:\n・ensure_ascii=False を付けないと日本語が \\u4f50\\u85e4 のようなエスケープ表記になります\n・print(user) との違いに注意: 辞書の表示はシングルクォートですが、JSONは必ずダブルクォートです。",
     hint: "json.dumps(user, ensure_ascii=False) です。Falseの先頭は大文字です。",
-    answerCode: "import json"
+    answerCode: "import json\n\nuser = {\"id\": 1, \"name\": \"佐藤\"}\nprint(json.dumps(user, ensure_ascii=False))"
   },
   {
     id: "i031",
@@ -848,7 +848,7 @@ const PROBLEMS = [
       "実際のAPIレスポンスはほとんどがこのような入れ子（ネスト）構造です。外側から1階層ずつ [\"キー\"] を重ねてたどります。\n\n" +
       "よくある間違い:\n・階層を飛ばして obj[\"address\"] とアクセスすると KeyError になります。構造を上からたどることが大切です\n・どんな構造か分からないときは、まず print(obj) で全体を確認するのがデバッグの定石です。",
     hint: "obj[\"user\"][\"address\"][\"city\"] のように外側から順にたどります。",
-    answerCode: "import json"
+    answerCode: "import json\n\ndata = '{\"user\": {\"name\": \"田中\", \"address\": {\"city\": \"東京\", \"zip\": \"100-0001\"}}}'\nobj = json.loads(data)\nprint(obj[\"user\"][\"address\"][\"city\"])\nprint(obj[\"user\"][\"address\"][\"zip\"])"
   },
   {
     id: "i032",
@@ -864,7 +864,7 @@ const PROBLEMS = [
       "JSONの配列（[...]）は loads するとPythonのリストになります。「辞書のリスト」はデータ処理で最も頻出する形で、forで1件ずつ取り出して処理します。\n\n" +
       "よくある間違い:\n・f-string の中では item['name'] とシングルクォートを使います（外側のダブルクォートと衝突するため）\n・item.name のようなドット記法はPythonの辞書では使えません。",
     hint: "for item in json.loads(data): で1件ずつ取り出し、item['name'] と item['price'] を使います。",
-    answerCode: "import json"
+    answerCode: "import json\n\ndata = '[{\"name\": \"りんご\", \"price\": 120}, {\"name\": \"バナナ\", \"price\": 80}]'\nfor item in json.loads(data):\n    print(f\"{item['name']}: {item['price']}円\")"
   },
   {
     id: "i033",
@@ -880,7 +880,7 @@ const PROBLEMS = [
       "実データでは「あるはずのキーがない」ことが日常的に起こります。user[\"email\"] だと鈴木さんの行で KeyError になりますが、get なら止まらずデフォルト値で処理を続けられます。データ処理の堅牢性を高める基本テクニックです。\n\n" +
       "よくある間違い:\n・角カッコアクセスのままだと2人目でプログラムが停止します\n・getのデフォルト値を省略すると None が表示されてしまいます。",
     hint: "user.get('email', '未登録') で、キーがない場合に '未登録' が返ります。",
-    answerCode: "import json"
+    answerCode: "import json\n\ndata = '[{\"name\": \"佐藤\", \"email\": \"sato@example.com\"}, {\"name\": \"鈴木\"}]'\nfor user in json.loads(data):\n    print(f\"{user['name']}: {user.get('email', '未登録')}\")"
   },
   {
     id: "i034",
@@ -928,7 +928,7 @@ const PROBLEMS = [
       "Counter はリストを渡すだけで頻度集計が完了する標準ライブラリです。get イディオムで書くループが1行になります。most_common(n) は上位n件を（要素, 回数）のリストで返し、ランキング作成に最適です。\n\n" +
       "よくある間違い:\n・存在しないキーへのアクセスは KeyError ではなく 0 が返ります（普通の辞書との違い）\n・most_common() と引数を省略すると全件が返ります。",
     hint: "c = Counter(words) のあと、c[\"apple\"] と c.most_common(2) を出力します。",
-    answerCode: "from collections import Counter"
+    answerCode: "from collections import Counter\n\nwords = [\"apple\", \"banana\", \"apple\", \"cherry\", \"banana\", \"apple\"]\nc = Counter(words)\nprint(c[\"apple\"])\nprint(c.most_common(2))"
   },
   {
     id: "i037",
@@ -1104,7 +1104,7 @@ const PROBLEMS = [
       "csv.reader は各行を自動でリストに分解してくれます。io.StringIO は「文字列をファイルのように読ませる」道具で、csvモジュールはファイルオブジェクトを期待するため組み合わせて使います。\n\n" +
       "よくある間違い:\n・csv.reader(data) と文字列を直接渡すと、1文字ずつ処理されてしまいます。StringIO を忘れずに\n・split(\",\") でも動きますが、「値の中にカンマが含まれる」CSVを正しく扱えるのがcsvモジュールの利点です。",
     hint: "for row in csv.reader(io.StringIO(data)): で、row が ['りんご', '120'] のようなリストになります。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\n\ndata = \"りんご,120\\nバナナ,80\\nみかん,100\"\nfor row in csv.reader(io.StringIO(data)):\n    print(f\"{row[0]}: {row[1]}円\")"
   },
   {
     id: "i048",
@@ -1120,7 +1120,7 @@ const PROBLEMS = [
       "DictReader は1行目をヘッダーとして読み、各行を {'name': 'りんご', 'price': '120', 'stock': '5'} のような辞書で返します。row[0] のような番号ではなく列名でアクセスできるため、列の順序が変わっても壊れない堅牢なコードになります。\n\n" +
       "よくある間違い:\n・ヘッダー行は自動で読み飛ばされます。データ行として処理されることはありません\n・値はすべて文字列です。数値として使う場合は int() が必要です。",
     hint: "csv.DictReader(io.StringIO(data)) を使うと row['name'] のように列名でアクセスできます。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\n\ndata = \"name,price,stock\\nりんご,120,5\\nバナナ,80,0\"\nfor row in csv.DictReader(io.StringIO(data)):\n    print(f\"{row['name']}: 在庫{row['stock']}\")"
   },
   {
     id: "i049",
@@ -1152,7 +1152,7 @@ const PROBLEMS = [
       "実務で受け取るデータはカンマ区切りとは限りません（セミコロン・タブ・パイプなど）。csv.reader の delimiter 引数で区切り文字を指定すれば、同じ書き方でどの形式にも対応できます。\n\n" +
       "よくある間違い:\n・delimiter を指定し忘れると、1行がまるごと1要素として読まれ row[1] で IndexError になります\n・列の並びは「名前;点数;出身」です。出力の順序（名前→出身→点数）と異なる点に注意してください。",
     hint: "csv.reader(io.StringIO(data), delimiter=\";\") とします。row[0]=名前, row[1]=点数, row[2]=出身です。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\n\ndata = \"佐藤;85;東京\\n鈴木;92;大阪\"\nfor row in csv.reader(io.StringIO(data), delimiter=\";\"):\n    print(f\"{row[0]}（{row[2]}）: {row[1]}点\")"
   },
   {
     id: "i051",
@@ -1168,7 +1168,7 @@ const PROBLEMS = [
       "複数行の文字列は split(\"\\n\") で「行のリスト」に変換するのがログ解析の第一歩です。startswith() は「その文字列で始まるか」を判定するメソッドで、ログレベルの判定に最適です。\n\n" +
       "よくある間違い:\n・\"ERROR\" in line でも今回は同じ結果ですが、メッセージ本文に ERROR という単語が含まれる行も数えてしまう可能性があります。行頭判定には startswith が確実です\n・sum(1 for line in ... if ...) と1行で書く方法もあります。",
     hint: "for line in log.split(\"\\n\"): で1行ずつ取り出し、line.startswith(\"ERROR\") で判定します。",
-    answerCode: "count = 0\nfor line in log.split(\"\\n\"):\n    if line.startswith(\"ERROR\"):\n        count += 1\nprint(count)"
+    answerCode: "log = \"\"\"INFO 起動しました\nERROR 接続に失敗しました\nINFO 処理を開始します\nERROR タイムアウトしました\nWARN メモリ使用率が高いです\"\"\"\ncount = 0\nfor line in log.split(\"\\n\"):\n    if line.startswith(\"ERROR\"):\n        count += 1\nprint(count)"
   },
   {
     id: "i052",
@@ -1184,7 +1184,7 @@ const PROBLEMS = [
       "split(\" \", 1) の第2引数は「最大分割回数」です。1を指定すると最初の空白でだけ分割され、['ERROR', 'メッセージ全体'] の2要素になります。メッセージ部分に空白が含まれていても壊れません。\n\n" +
       "よくある間違い:\n・line.split(\" \")[1] だと、メッセージに空白が含まれる場合に最初の単語しか取れません\n・line.replace(\"ERROR \", \"\") でも動きますが、本文中の同じ文字列まで置換されるリスクがあります。",
     hint: "line.split(\" \", 1)[1] で「最初の空白より後ろ全部」が取れます。",
-    answerCode: "for line in log.split(\"\\n\"):\n    if line.startswith(\"ERROR\"):\n        print(line.split(\" \", 1)[1])"
+    answerCode: "log = \"\"\"INFO サービス起動\nERROR ディスク容量が不足しています\nWARN 応答が遅延しています\nERROR 接続がタイムアウトしました\"\"\"\nfor line in log.split(\"\\n\"):\n    if line.startswith(\"ERROR\"):\n        print(line.split(\" \", 1)[1])"
   },
   {
     id: "i053",
@@ -1200,7 +1200,7 @@ const PROBLEMS = [
       "「ログから数値を取り出して集計する」一連の流れです。split(\" \")[2] で3番目の要素（\"120ms\"）を取り、rstrip(\"ms\") で末尾の単位を除いてから int() で数値化します。\n\n" +
       "よくある間違い:\n・\"120ms\" をそのまま int() に渡すと ValueError です。単位の除去を忘れずに\n・rstrip(\"ms\") は「末尾にある m と s の文字を取り除く」という意味です。今回のデータでは問題ありませんが、ms.replace(\"ms\", \"\") や ms[:-2] でも同じ結果になります。",
     hint: "line.split(\" \")[2] が \"120ms\"。int(ms.rstrip(\"ms\")) で数値になります。",
-    answerCode: "times = []\nfor line in log.split(\"\\n\"):\n    ms = line.split(\" \")[2]\n    times.append(int(ms.rstrip(\"ms\")))\nprint(sum(times))\nprint(sum(times) / len(times))"
+    answerCode: "log = \"\"\"GET /api/users 120ms\nGET /api/items 250ms\nGET /api/login 95ms\"\"\"\ntimes = []\nfor line in log.split(\"\\n\"):\n    ms = line.split(\" \")[2]\n    times.append(int(ms.rstrip(\"ms\")))\nprint(sum(times))\nprint(sum(times) / len(times))"
   },
 
   // ---------------------------------------------------------
@@ -1252,7 +1252,7 @@ const PROBLEMS = [
       "engineeringで学んだ「getイディオムによるグループ別合計」を、実務データ（注文明細）に適用する問題です。SQLなら GROUP BY category、pandasなら groupby(\"category\").sum() に相当します。\n\n" +
       "よくある間違い:\n・キーにするのは s[\"item\"]（商品名）ではなく s[\"category\"] です。「何の軸で集計するか」を最初に確認する習慣が大切です。",
     hint: "totals[s[\"category\"]] = totals.get(s[\"category\"], 0) + s[\"amount\"] で集計します。",
-    answerCode: "totals = {}\nfor s in sales:\n    totals[s[\"category\"]] = totals.get(s[\"category\"], 0) + s[\"amount\"]\nprint(totals)"
+    answerCode: "sales = [\n    {\"item\": \"Tシャツ\", \"category\": \"衣類\", \"amount\": 2500},\n    {\"item\": \"クッキー\", \"category\": \"食品\", \"amount\": 1200},\n    {\"item\": \"パーカー\", \"category\": \"衣類\", \"amount\": 3800},\n    {\"item\": \"マグカップ\", \"category\": \"雑貨\", \"amount\": 900},\n    {\"item\": \"紅茶\", \"category\": \"食品\", \"amount\": 600},\n]\ntotals = {}\ntotals = {}\nfor s in sales:\n    totals[s[\"category\"]] = totals.get(s[\"category\"], 0) + s[\"amount\"]\nprint(totals)"
   },
   {
     id: "i057",
@@ -1380,7 +1380,7 @@ const PROBLEMS = [
       "新規率は集客施策の効果を測るKPIです。sum(1 for o in orders if 条件) は「条件に合う件数を数える」イディオムで、フラグ集計の定番です。2 ÷ 8 = 0.25 が :.0% で 25% になります。\n\n" +
       "よくある間違い:\n・len([o for o in orders if o[\"is_new\"]]) でも数えられますが、sum(1 for ...) は一時リストを作らない分効率的です\n・if o[\"is_new\"] == True と書くのは冗長です。boolはそのまま条件に使えます。",
     hint: "new_count = sum(1 for o in orders if o[\"is_new\"]) で新規件数が数えられます。",
-    answerCode: "new_count = sum(1 for o in orders if o[\"is_new\"])\nprint(f\"新規率: {new_count / len(orders):.0%}\")"
+    answerCode: "orders = [\n    {\"id\": 1, \"is_new\": True}, {\"id\": 2, \"is_new\": False},\n    {\"id\": 3, \"is_new\": False}, {\"id\": 4, \"is_new\": True},\n    {\"id\": 5, \"is_new\": False}, {\"id\": 6, \"is_new\": False},\n    {\"id\": 7, \"is_new\": False}, {\"id\": 8, \"is_new\": False},\n]\nnew_count = sum(1 for o in orders if o[\"is_new\"])\nprint(f\"新規率: {new_count / len(orders):.0%}\")"
   },
   {
     id: "i065",
@@ -1412,7 +1412,7 @@ const PROBLEMS = [
       "発注点方式は在庫管理の基本で、このような「閾値を下回ったらアラート」の処理は在庫・予算・サーバー監視などあらゆる運用に登場します。\n\n" +
       "よくある間違い:\n・ステッカーは在庫8＝発注点8で「下回っていない」ため対象外です。< と <= の違いが結果を変えます。仕様の「下回ったら」を正確に読み取ることが実務では重要です\n・カッコ（）は全角です。",
     hint: "if item[\"stock\"] < item[\"reorder\"]: です。8 < 8 は False になる点に注意。",
-    answerCode: "for item in items:\n    if item[\"stock\"] < item[\"reorder\"]:\n        print(f\"{item['name']}: 在庫{item['stock']}（発注点{item['reorder']}）\")"
+    answerCode: "items = [\n    {\"name\": \"マグカップ\", \"stock\": 4, \"reorder\": 10},\n    {\"name\": \"Tシャツ\", \"stock\": 25, \"reorder\": 15},\n    {\"name\": \"ステッカー\", \"stock\": 8, \"reorder\": 8},\n]\nfor item in items:\n    if item[\"stock\"] < item[\"reorder\"]:\n        print(f\"{item['name']}: 在庫{item['stock']}（発注点{item['reorder']}）\")"
   },
   {
     id: "i067",
@@ -1460,7 +1460,7 @@ const PROBLEMS = [
       "入れ子の辞書は「倉庫→商品→数量」のような階層データの自然な表現です。外側を items() でループすると、各倉庫の在庫辞書が items に入るので、values() の合計で倉庫合計が出ます。\n\n" +
       "よくある間違い:\n・sum(items) はキー（商品名の文字列）を合計しようとしてエラーになります。数量は values() です\n・変数名 items と辞書メソッド items() が紛らわしい点に注意してください（stocks などの名前にしても構いません）。",
     hint: "for warehouse, items in inventory.items(): で回し、sum(items.values()) で合計します。",
-    answerCode: "for warehouse, items in inventory.items():\n    print(f\"{warehouse}: {sum(items.values())}個\")"
+    answerCode: "inventory = {\n    \"東京倉庫\": {\"マグカップ\": 30, \"Tシャツ\": 120},\n    \"大阪倉庫\": {\"マグカップ\": 15, \"ステッカー\": 40},\n}\nfor warehouse, items in inventory.items():\n    print(f\"{warehouse}: {sum(items.values())}個\")"
   },
   {
     id: "i070",
@@ -1496,7 +1496,7 @@ const PROBLEMS = [
       "クラスのメソッドの第1引数は必ず self です。__init__ はインスタンス生成時に自動で呼ばれ、self.属性名 = 値 でデータを保持します。\n\n" +
       "よくある間違い:\n・メソッド定義で self を書き忘れる\n・文末の「。」を忘れる",
     hint: "class Person: の中に def __init__(self, name, age): と def introduce(self): を定義します。",
-    answerCode: "class Person:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age"
+    answerCode: "class Person:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\n    def introduce(self):\n        print(f\"私の名前は{self.name}、{self.age}歳です。\")\n\np = Person(\"太郎\", 30)\np.introduce()"
   },
   {
     id: "a002",
@@ -1528,7 +1528,7 @@ const PROBLEMS = [
       "try ブロック内で例外が発生すると、処理が except に移ります。例外を捕捉すればプログラムは停止せず、その後の処理を続行できます。\n\n" +
       "よくある間違い:\n・except のスペル間違いや、捕捉する例外クラス名の間違い\n・「処理を続行します」を except ブロックの中に入れても今回は同じ出力になりますが、例外が起きなかった場合にも実行したい処理は try / except の外に書くのが基本です。",
     hint: "try: の中で 10 / 0 を実行し、except ZeroDivisionError: で捕捉します。",
-    answerCode: "try:\n    result = 10 / 0\nexcept ZeroDivisionError:\n    print(\"0で割ることはできません\")"
+    answerCode: "try:\n    result = 10 / 0\nexcept ZeroDivisionError:\n    print(\"0で割ることはできません\")\n\nprint(\"処理を続行します\")"
   },
   {
     id: "a004",
@@ -1544,7 +1544,7 @@ const PROBLEMS = [
       "再帰関数は「自分自身を呼び出す関数」です。必ず終了条件（ベースケース、ここでは n <= 1）を最初に書きます。\n\n" +
       "よくある間違い:\n・終了条件を書き忘れると無限再帰になり RecursionError が発生します\n・return n * factorial(n - 1) の n - 1 を忘れると無限ループになります。",
     hint: "終了条件 if n <= 1: return 1 を先に書き、それ以外は n * factorial(n - 1) を返します。",
-    answerCode: "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)"
+    answerCode: "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nprint(factorial(5))\nprint(factorial(10))"
   },
   {
     id: "a005",
@@ -1560,7 +1560,7 @@ const PROBLEMS = [
       "class 子クラス(親クラス): で継承します。Dog と Cat には __init__ を書いていませんが、親クラス Animal の __init__ がそのまま引き継がれます。同名のメソッドを定義すると上書き（オーバーライド）されます。\n\n" +
       "よくある間違い:\n・class Dog(Animal) のカッコを忘れると継承されず、name が保存されません\n・「ワン！」の「！」は全角です。",
     hint: "class Dog(Animal): のようにカッコで親クラスを指定します。__init__ は親のものが引き継がれるので書かなくてOKです。",
-    answerCode: "class Animal:\n    def __init__(self, name):\n        self.name = name"
+    answerCode: "class Animal:\n    def __init__(self, name):\n        self.name = name\n\n    def cry(self):\n        return \"...\"\n\nclass Dog(Animal):\n    def cry(self):\n        return self.name + \"「ワン！」\"\n\nclass Cat(Animal):\n    def cry(self):\n        return self.name + \"「ニャー」\"\n\nprint(Dog(\"ポチ\").cry())\nprint(Cat(\"タマ\").cry())"
   },
   {
     id: "a006",
@@ -1576,7 +1576,7 @@ const PROBLEMS = [
       "「データ（残高）とそれを操作するメソッド（入金・出金）をひとまとめにする」というクラスの基本的な使い方です。状態は self.balance に保持され、メソッド呼び出しのたびに更新されます。\n\n" +
       "よくある間違い:\n・self.balance ではなく balance と書くと、ただのローカル変数になり状態が保存されません\n・残高チェックは >= です。> にすると残高ちょうどの出金ができなくなります。",
     hint: "self.balance に状態を保持します。withdraw では if self.balance >= amount: で判定します。",
-    answerCode: "class BankAccount:\n    def __init__(self):\n        self.balance = 0"
+    answerCode: "class BankAccount:\n    def __init__(self):\n        self.balance = 0\n\n    def deposit(self, amount):\n        self.balance += amount\n\n    def withdraw(self, amount):\n        if self.balance >= amount:\n            self.balance -= amount\n        else:\n            print(\"残高不足\")\n\nacc = BankAccount()\nacc.deposit(1000)\nacc.withdraw(300)\nprint(acc.balance)\nacc.withdraw(1000)"
   },
   {
     id: "a007",
@@ -1608,7 +1608,7 @@ const PROBLEMS = [
       "raise は自分で例外を発生させる文です。「不正な値を受け取ったら例外で知らせる」のは関数設計の基本パターンです。except ValueError as e: の e にはエラーメッセージが入っており、print(e) でメッセージだけを表示できます。\n\n" +
       "よくある間違い:\n・raise を return と書いてしまうと、エラーではなく普通の戻り値になってしまいます\n・as e を忘れるとメッセージを取り出せません。",
     hint: "if age < 0: raise ValueError(\"...\") とし、呼び出し側で except ValueError as e: print(e) とします。",
-    answerCode: "def check_age(age):\n    if age < 0:\n        raise ValueError(\"年齢は0以上で指定してください\")\n    return age"
+    answerCode: "def check_age(age):\n    if age < 0:\n        raise ValueError(\"年齢は0以上で指定してください\")\n    return age\n\nprint(check_age(20))\n\ntry:\n    check_age(-5)\nexcept ValueError as e:\n    print(e)"
   },
   {
     id: "a009",
@@ -1624,7 +1624,7 @@ const PROBLEMS = [
       "fib(0) = 0 と fib(1) = 1 の2つのベースケースが if n <= 1: return n の1行にまとまっているのがポイントです。\n\n" +
       "よくある間違い:\n・ベースケースを return 1 にすると、fib(0) が 1 になり結果がずれます\n・この素朴な再帰は同じ計算を何度も繰り返すため、fib(35) などにすると急激に遅くなります（改善にはメモ化という手法を使います）。",
     hint: "if n <= 1: return n がベースケースです。あとは fib(n-1) + fib(n-2) を返します。",
-    answerCode: "def fib(n):\n    if n <= 1:\n        return n\n    return fib(n - 1) + fib(n - 2)"
+    answerCode: "def fib(n):\n    if n <= 1:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nprint(fib(10))\nprint(fib(15))"
   },
   {
     id: "a010",
@@ -1640,7 +1640,7 @@ const PROBLEMS = [
       "n % 10 で1の位が取り出せ、n // 10 で1の位を取り除いた数になります（9876 → 余り6、商987）。「問題を1桁分小さくして自分自身に渡す」という再帰の典型例です。\n\n" +
       "よくある間違い:\n・n / 10 と普通の割り算を使うと float になり、正しく桁を削れません。整数の再帰では // を使います\n・ベースケース if n < 10 を忘れると無限再帰で RecursionError になります。",
     hint: "1の位は n % 10、残りは n // 10 です。n が1桁になったら再帰を止めます。",
-    answerCode: "def digit_sum(n):\n    if n < 10:\n        return n\n    return n % 10 + digit_sum(n // 10)"
+    answerCode: "def digit_sum(n):\n    if n < 10:\n        return n\n    return n % 10 + digit_sum(n // 10)\n\nprint(digit_sum(9876))\nprint(digit_sum(5))"
   },
   {
     id: "a011",
@@ -1656,7 +1656,7 @@ const PROBLEMS = [
       "open(ファイル名, モード) でファイルを開きます。\"w\" は書き込み（上書き）、省略時は \"r\"（読み込み）です。with 文を使うとブロックを抜けるときに自動でファイルが閉じられるため、close() の書き忘れを防げます。\n\n" +
       "よくある間違い:\n・write() は print() と違って改行を自動で付けません。改行したい場所には \\n を自分で書きます\n・書き込んだ直後に閉じずに読もうとすると、内容がまだ書き込まれていないことがあります。with ブロックを分けるのが安全です。",
     hint: "with open(\"memo.txt\", \"w\") as f: で書き込み、別の with open(\"memo.txt\") as f: で読み込みます。",
-    answerCode: "with open(\"memo.txt\", \"w\") as f:\n    f.write(\"1行目\\n2行目\\n\")"
+    answerCode: "with open(\"memo.txt\", \"w\") as f:\n    f.write(\"1行目\\n2行目\\n\")\n\nwith open(\"memo.txt\") as f:\n    print(f.read())"
   },
   {
     id: "a012",
@@ -1672,7 +1672,7 @@ const PROBLEMS = [
       "ファイルオブジェクトはforで直接ループでき、1行ずつ取り出せます。読み込んだ各行は「80\\n」のような改行付きの文字列ですが、int() は前後の空白・改行を無視して変換してくれます。\n\n" +
       "よくある間違い:\n・f.write(s) と数値をそのまま渡すと TypeError になります（write は文字列のみ）\n・行の合計を文字列のまま + すると \"809275\" のような連結になってしまいます。int() への変換を忘れずに。",
     hint: "書き込みは f.write(str(s) + \"\\n\")、読み込みは for line in f: で1行ずつ処理して int(line) を合計します。",
-    answerCode: "scores = [80, 92, 75]\nwith open(\"scores.txt\", \"w\") as f:\n    for s in scores:\n        f.write(str(s) + \"\\n\")"
+    answerCode: "scores = [80, 92, 75]\nwith open(\"scores.txt\", \"w\") as f:\n    for s in scores:\n        f.write(str(s) + \"\\n\")\n\ntotal = 0\nwith open(\"scores.txt\") as f:\n    for line in f:\n        total += int(line)\nprint(total)"
   },
   {
     id: "a013",
@@ -1752,7 +1752,7 @@ const PROBLEMS = [
       "引数名の前に * を付けると、渡された引数がすべてタプルにまとめられます。3個でも4個でも同じ関数で受け取れるのがポイントです。組み込みの print() も実はこの仕組みで複数の値を受け取っています。\n\n" +
       "よくある間違い:\n・関数の中では args（*なし）として使います。sum(*args) と書くとエラーになります\n・args という名前は慣習で、*values など他の名前でも動きます。",
     hint: "def total(*args): とすると、args に引数がタプルとして入ります。sum(args) で合計できます。",
-    answerCode: "def total(*args):\n    return sum(args)"
+    answerCode: "def total(*args):\n    return sum(args)\n\nprint(total(1, 2, 3))\nprint(total(10, 20, 30, 40))"
   },
   {
     id: "a018",
@@ -1768,7 +1768,7 @@ const PROBLEMS = [
       "__str__ を定義すると、そのインスタンスを print したときの表示を自分で決められます。定義しない場合は <__main__.Item object at 0x...> のような表示になります。デバッグやログ出力で非常に役立つ特殊メソッドです。\n\n" +
       "よくある間違い:\n・__str__ の中で print してしまうと None が返りエラーになります。return で文字列を返します\n・アンダースコアは前後2つずつです（_str_ では機能しません）。",
     hint: "def __str__(self): return f\"{self.name}({self.price}円)\" を定義すると、printの表示が変わります。",
-    answerCode: "class Item:\n    def __init__(self, name, price):\n        self.name = name\n        self.price = price"
+    answerCode: "class Item:\n    def __init__(self, name, price):\n        self.name = name\n        self.price = price\n\n    def __str__(self):\n        return f\"{self.name}({self.price}円)\"\n\nprint(Item(\"りんご\", 120))\nprint(Item(\"バナナ\", 80))"
   },
   {
     id: "a019",
@@ -1784,7 +1784,7 @@ const PROBLEMS = [
       "yield を含む関数はジェネレータになり、値を「1つずつ、求められるたびに」生成します。リストと違って全要素をメモリに持たないため、大量データの処理で威力を発揮します。return が「1回返して終わり」なのに対し、yield は「返しては次の要求まで一時停止」です。\n\n" +
       "よくある間違い:\n・yield を return にすると最初の1つで関数が終了してしまいます\n・print(squares(5)) とすると <generator object ...> と表示されます。forで回すか list() で変換します。",
     hint: "for x in range(1, n + 1): yield x * x とします。呼び出し側は普通のforで回せます。",
-    answerCode: "def squares(n):\n    for x in range(1, n + 1):\n        yield x * x"
+    answerCode: "def squares(n):\n    for x in range(1, n + 1):\n        yield x * x\n\nfor s in squares(5):\n    print(s)"
   },
   {
     id: "a020",
@@ -1836,7 +1836,7 @@ const PROBLEMS = [
       "「JSONを読み込む→必要な配列を取り出す→条件で絞って必要な項目だけ集める」という、API連携処理の縮図のような問題です。JSONの true / false は loads すると Python の True / False に変換されるため、if u[\"active\"] とそのまま条件に使えます。\n\n" +
       "よくある間違い:\n・data はリストではなく {\"users\": [...]} という辞書です。まず data[\"users\"] で配列を取り出します\n・if u[\"active\"] == \"true\" と文字列比較すると、誰もマッチしません（変換後はbool型です）。",
     hint: "[u[\"name\"] for u in data[\"users\"] if u[\"active\"]] の形です。activeはbool型になっています。",
-    answerCode: "import json"
+    answerCode: "import json\nresponse = '{\"users\": [{\"name\": \"佐藤\", \"age\": 28, \"active\": true}, {\"name\": \"鈴木\", \"age\": 35, \"active\": false}, {\"name\": \"高橋\", \"age\": 41, \"active\": true}]}'\nimport json\n\ndata = json.loads(response)\nactive_names = [u[\"name\"] for u in data[\"users\"] if u[\"active\"]]\nprint(active_names)"
   },
   {
     id: "a023",
@@ -1852,7 +1852,7 @@ const PROBLEMS = [
       "indent=2 を指定すると、キーごとに改行とインデントが入った読みやすいJSONになります。設定ファイルの出力やAPIレスポンスのデバッグ表示で頻繁に使います。\n\n" +
       "よくある間違い:\n・Pythonの False は JSON では小文字の false に変換されます。None → null、True → true も同様で、この対応はJSONを扱ううえで必須知識です\n・indent を付けないと1行のJSONになり、期待される出力と一致しません。",
     hint: "json.dumps(config, indent=2, ensure_ascii=False) です。Falseがfalseに変わる点に注目。",
-    answerCode: "import json"
+    answerCode: "import json\n\nconfig = {\"app\": \"trainer\", \"debug\": False, \"version\": 2}\nprint(json.dumps(config, indent=2, ensure_ascii=False))"
   },
   {
     id: "a024",
@@ -1868,7 +1868,7 @@ const PROBLEMS = [
       "「ヘッダー情報（order_id）+ 明細の配列（items）」は、注文・請求・伝票など業務データの典型的な構造です。明細の集計は sum() とジェネレータ式で簡潔に書けます（120×3 + 200×2 = 760）。\n\n" +
       "よくある間違い:\n・len(order) は辞書のキー数（2）を返すので、たまたま正解に見えますが意味が違います。明細数は len(order[\"items\"]) です\n・price と qty の掛け算を忘れると 320 になってしまいます。",
     hint: "order[\"items\"] が明細のリストです。len() と sum(item[\"price\"] * item[\"qty\"] for ...) で集計します。",
-    answerCode: "import json"
+    answerCode: "import json\ndata = '{\"order_id\": 101, \"items\": [{\"name\": \"ペン\", \"price\": 120, \"qty\": 3}, {\"name\": \"ノート\", \"price\": 200, \"qty\": 2}]}'\nimport json\n\norder = json.loads(data)\nprint(len(order[\"items\"]))\nprint(sum(item[\"price\"] * item[\"qty\"] for item in order[\"items\"]))"
   },
   {
     id: "a025",
@@ -1980,7 +1980,7 @@ const PROBLEMS = [
       "「CSVを読み込んで特定の列を集計する」のは、データ処理業務で最も頻度の高いタスクのひとつです（SQLの SUM(amount) に相当）。450 + 380 + 900 = 1730 です。\n\n" +
       "よくある間違い:\n・CSVから読んだ値はすべて文字列です。int() を忘れると total += で TypeError になります\n・sum(int(row[\"amount\"]) for row in csv.DictReader(...)) と1行で書いても正解です。",
     hint: "total += int(row[\"amount\"]) です。CSVの値は文字列であることを忘れずに。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\n\ndata = \"date,item,amount\\n6/1,コーヒー,450\\n6/1,サンド,380\\n6/2,コーヒー,900\"\ntotal = 0\nfor row in csv.DictReader(io.StringIO(data)):\n    total += int(row[\"amount\"])\nprint(total)"
   },
   {
     id: "a032",
@@ -1996,7 +1996,7 @@ const PROBLEMS = [
       "「条件に合う行だけを抽出する」フィルタ処理です（SQLの WHERE stock < 5 に相当）。在庫アラート・異常検知・対象者抽出など、業務処理の中心となるパターンです。\n\n" +
       "よくある間違い:\n・row[\"stock\"] < 5 と文字列のまま比較すると TypeError になります。比較の前に int() が必須です\n・\"5\" の行（ぶどう）は「5未満」に含まれません。< と <= の違いに注意してください。",
     hint: "if int(row[\"stock\"]) < 5: でフィルタします。文字列のまま比較しないこと。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\n\ndata = \"name,stock\\nりんご,12\\nバナナ,3\\nみかん,0\\nぶどう,5\"\nfor row in csv.DictReader(io.StringIO(data)):\n    if int(row[\"stock\"]) < 5:\n        print(f\"{row['name']}: 残り{row['stock']}\")"
   },
   {
     id: "a033",
@@ -2012,7 +2012,7 @@ const PROBLEMS = [
       "「生データを読み込み、正しい型に変換してから内部形式に揃える」のはETLの E（抽出）と T（変換）にあたる中核処理です。一度型付きのリストにしてしまえば、後続の集計・分析が安全に書けます。\n\n" +
       "よくある間違い:\n・DictReaderのrowをそのままappendすると、値が全部文字列のままになり、出力も {'price': '120', ...} となって一致しません\n・在庫金額は 120×10 + 200×5 = 2200 です。",
     hint: "{\"name\": row[\"name\"], \"price\": int(row[\"price\"]), \"stock\": int(row[\"stock\"])} を組み立ててappendします。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\n\ndata = \"name,price,stock\\nペン,120,10\\nノート,200,5\"\nproducts = []\nfor row in csv.DictReader(io.StringIO(data)):\n    products.append({\"name\": row[\"name\"], \"price\": int(row[\"price\"]), \"stock\": int(row[\"stock\"])})\nprint(products)\nprint(sum(p[\"price\"] * p[\"stock\"] for p in products))"
   },
   {
     id: "a034",
@@ -2028,7 +2028,7 @@ const PROBLEMS = [
       "「行を分解→キーを取り出す→getイディオムでカウント」という、ログ解析の基本フローです。システムの健全性確認やエラー監視のレポートはこの集計が出発点になります。\n\n" +
       "よくある間違い:\n・line.split(\" \")[0] は「最初の空白までの単語」です。[1] にするとメッセージの先頭単語を数えてしまいます\n・辞書は登場順（INFO→ERROR→WARN）で表示されます。",
     hint: "level = line.split(\" \")[0] でレベルを取り出し、counts.get(level, 0) + 1 で数えます。",
-    answerCode: "counts = {}\nfor line in log.split(\"\\n\"):\n    level = line.split(\" \")[0]\n    counts[level] = counts.get(level, 0) + 1\nprint(counts)"
+    answerCode: "log = \"\"\"INFO 起動完了\nERROR 接続失敗\nINFO リクエスト受信\nWARN 応答遅延\nERROR タイムアウト\nINFO 処理完了\"\"\"\ncounts = {}\nfor line in log.split(\"\\n\"):\n    level = line.split(\" \")[0]\n    counts[level] = counts.get(level, 0) + 1\nprint(counts)"
   },
   {
     id: "a035",
@@ -2044,7 +2044,7 @@ const PROBLEMS = [
       "「フィルタ（ERRORのみ）→キー抽出（時間帯）→集計」の組み合わせです。時間帯別のエラー分布は「障害がいつ集中しているか」を見つける実務の定番分析で、line.split(\":\")[0] で時刻の「時」部分が取り出せます。\n\n" +
       "よくある間違い:\n・INFOの行を除外し忘れると {'10': 2} の部分が変わってしまいます。集計対象の絞り込みを先に行います\n・キーは文字列 '09' のままにします。int() にすると出力が {9: 2, ...} となり一致しません。",
     hint: "if \"ERROR\" in line: で絞り、hour = line.split(\":\")[0] をキーに集計します。",
-    answerCode: "counts = {}\nfor line in log.split(\"\\n\"):\n    if \"ERROR\" in line:\n        hour = line.split(\":\")[0]\n        counts[hour] = counts.get(hour, 0) + 1\nprint(counts)"
+    answerCode: "log = \"\"\"09:15:02 ERROR timeout\n09:48:11 ERROR connection refused\n10:05:33 INFO recovered\n10:21:45 ERROR timeout\n23:59:59 ERROR disk full\"\"\"\ncounts = {}\nfor line in log.split(\"\\n\"):\n    if \"ERROR\" in line:\n        hour = line.split(\":\")[0]\n        counts[hour] = counts.get(hour, 0) + 1\nprint(counts)"
   },
   {
     id: "a036",
@@ -2060,7 +2060,7 @@ const PROBLEMS = [
       "grepコマンドの -n オプションに相当する処理です。enumerate の第2引数に 1 を渡すことで、人間が読む行番号（1始まり）になります。「どの行で問題が起きたか」を特定する調査作業の基本形です。\n\n" +
       "よくある間違い:\n・enumerate(lines) と開始値を省略すると0始まりになり、行番号が1つずれます\n・in は部分一致です。\"timeout\" が行のどこにあってもマッチします。",
     hint: "for i, line in enumerate(log.split(\"\\n\"), 1): として、if \"timeout\" in line: で判定します。",
-    answerCode: "for i, line in enumerate(log.split(\"\\n\"), 1):\n    if \"timeout\" in line:\n        print(f\"{i}行目: {line}\")"
+    answerCode: "log = \"\"\"connect ok\nrequest timeout\nretry\nread timeout\ndone\"\"\"\nfor i, line in enumerate(log.split(\"\\n\"), 1):\n    if \"timeout\" in line:\n        print(f\"{i}行目: {line}\")"
   },
   {
     id: "a037",
@@ -2092,7 +2092,7 @@ const PROBLEMS = [
       "SQLの JOIN、pandasの merge に相当する「キーによる結合」です。先に {1: '佐藤', 2: '鈴木'} という対応表（ルックアップ辞書）を作っておくのがポイントで、注文ごとにusersを探し回るより高速かつ簡潔になります。\n\n" +
       "よくある間違い:\n・ordersのループ内でさらにusersをループする二重ループでも動きますが、データが増えると遅くなります。辞書化が定石です\n・キーは id と user_id で名前が違う点に注意してください。",
     hint: "name_by_id = {u[\"id\"]: u[\"name\"] for u in users} を作れば、name_by_id[o['user_id']] で引けます。",
-    answerCode: "users = [{\"id\": 1, \"name\": \"佐藤\"}, {\"id\": 2, \"name\": \"鈴木\"}]\norders = [{\"user_id\": 1, \"item\": \"ペン\"}, {\"user_id\": 2, \"item\": \"ノート\"}, {\"user_id\": 1, \"item\": \"消しゴム\"}]"
+    answerCode: "users = [{\"id\": 1, \"name\": \"佐藤\"}, {\"id\": 2, \"name\": \"鈴木\"}]\norders = [{\"user_id\": 1, \"item\": \"ペン\"}, {\"user_id\": 2, \"item\": \"ノート\"}, {\"user_id\": 1, \"item\": \"消しゴム\"}]\n\nname_by_id = {u[\"id\"]: u[\"name\"] for u in users}\nfor o in orders:\n    print(f\"{name_by_id[o['user_id']]}: {o['item']}\")"
   },
   {
     id: "a039",
@@ -2140,7 +2140,7 @@ const PROBLEMS = [
       "「読み込み→検証（型変換）→フィルタ→集計」という、これまで学んだ要素を組み合わせた小さなETLパイプラインです。紅茶の行は price=abc で除外、サンドの qty=0 の行も除外され、コーヒー 450×2+450×3=2250、サンド 380×2=760 が残ります。\n\n" +
       "よくある間違い:\n・ループ内の continue は「この行をスキップして次の行へ」です。break にすると以降の行が全部処理されません\n・検証（try/except）を集計より先に行うのがポイントです。順序が逆だと不正な行で停止します。",
     hint: "try/except ValueError: continue で不正行を捨て、if qty == 0: continue で除外し、getイディオムで集計します。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\n\nraw = \"date,item,price,qty\\n6/1,コーヒー,450,2\\n6/1,紅茶,abc,1\\n6/2,コーヒー,450,3\\n6/2,サンド,380,0\\n6/2,サンド,380,2\"\ntotals = {}\nfor row in csv.DictReader(io.StringIO(raw)):\n    try:\n        price = int(row[\"price\"])\n        qty = int(row[\"qty\"])\n    except ValueError:\n        continue\n    if qty == 0:\n        continue\n    totals[row[\"item\"]] = totals.get(row[\"item\"], 0) + price * qty\nprint(totals)"
   },
 
   // ---------------------------------------------------------
@@ -2176,7 +2176,7 @@ const PROBLEMS = [
       "割引・クーポンの計算はECの基幹ロジックです。「明細ごとに計算しながら合計も積み上げる」という、明細処理と集計を同時に行うパターンを身につけましょう。\n\n" +
       "よくある間違い:\n・4500 * 0.9 = 4050.0 と float になるため、int() で整数化しないと「4050.0円」と表示されてしまいます。金額計算での型の扱いは実務で常に注意が必要です\n・合計の出力をループの中に入れると毎回表示されてしまいます。",
     hint: "amount = int(o[\"amount\"] * 0.9) if o[\"coupon\"] else o[\"amount\"] で支払金額が決まります。",
-    answerCode: "total = 0\nfor o in orders:\n    amount = int(o[\"amount\"] * 0.9) if o[\"coupon\"] else o[\"amount\"]\n    total += amount\n    print(f\"注文{o['id']}: {amount}円\")\nprint(f\"合計: {total}円\")"
+    answerCode: "orders = [\n    {\"id\": 1, \"amount\": 4500, \"coupon\": True},\n    {\"id\": 2, \"amount\": 2800, \"coupon\": False},\n    {\"id\": 3, \"amount\": 6000, \"coupon\": True},\n]\ntotal = 0\nfor o in orders:\n    amount = int(o[\"amount\"] * 0.9) if o[\"coupon\"] else o[\"amount\"]\n    total += amount\n    print(f\"注文{o['id']}: {amount}円\")\nprint(f\"合計: {total}円\")"
   },
   {
     id: "a044",
@@ -2240,7 +2240,7 @@ const PROBLEMS = [
       "購入の頻度（Frequency）と金額（Monetary）で顧客を分類する考え方はRFM分析と呼ばれ、マーケティングの定番手法です。複数条件の and による絞り込みを内包表記で簡潔に書けます。\n\n" +
       "よくある間違い:\n・or にすると「どちらか片方でも満たす顧客」になり、鈴木さん以外全員が対象になってしまいます。and / or の選択はビジネス要件の理解そのものです\n・高橋さんは freq=5 でぎりぎり対象です。>= と > の違いに注意してください。",
     hint: "if c[\"freq\"] >= 5 and c[\"total\"] >= 10000 の2条件で絞り込みます。",
-    answerCode: "vip = [c[\"name\"] for c in customers if c[\"freq\"] >= 5 and c[\"total\"] >= 10000]\nprint(vip)"
+    answerCode: "customers = [\n    {\"name\": \"佐藤\", \"freq\": 6, \"total\": 45000},\n    {\"name\": \"鈴木\", \"freq\": 2, \"total\": 8000},\n    {\"name\": \"高橋\", \"freq\": 5, \"total\": 12000},\n]\nvip = [c[\"name\"] for c in customers if c[\"freq\"] >= 5 and c[\"total\"] >= 10000]\nprint(vip)"
   },
   {
     id: "a048",
@@ -2272,7 +2272,7 @@ const PROBLEMS = [
       "購入間隔は「次の購入を促すメールをいつ送るか」を決める材料になります。datetime.strptime(文字列, 書式) で日付型に変換すると、引き算で日数差（.days）が取れます。間隔は 7日・14日・14日 で平均 11.7日です。\n\n" +
       "よくある間違い:\n・月をまたぐ日数計算（4/22→5/6 = 14日）は文字列では計算できません。日付計算には datetime が必須です\n・隣同士の差なのでペア数は len - 1 個です。range(len(days) - 1) の -1 を忘れると IndexError になります。",
     hint: "日付型のリストを作り、(days[i+1] - days[i]).days で隣同士の差を集めます。",
-    answerCode: "from datetime import datetime"
+    answerCode: "from datetime import datetime\n\ndates = [\"2026-04-01\", \"2026-04-08\", \"2026-04-22\", \"2026-05-06\"]\ndays = [datetime.strptime(d, \"%Y-%m-%d\") for d in dates]\ngaps = [(days[i + 1] - days[i]).days for i in range(len(days) - 1)]\nprint(f\"平均購入間隔: {round(sum(gaps) / len(gaps), 1)}日\")"
   },
   {
     id: "a050",
@@ -2288,7 +2288,7 @@ const PROBLEMS = [
       "「理論値と実測値の突合（とつごう）」は棚卸し・会計・データ品質チェックの基本作業です。Tシャツは理論在庫 50+0-12=38個 に対し実在庫35個で、差異-3（紛失や記録漏れの疑い）が検出されます。\n\n" +
       "よくある間違い:\n・差異の符号は「実在庫 - 理論在庫」です。逆にすると過剰/不足の意味が逆転します\n・負の数は f-string でそのまま「-3」と表示されるため、マイナス記号を自分で付ける必要はありません。",
     hint: "expected = r[\"open\"] + r[\"in\"] - r[\"out\"] を計算し、actual と比較します。",
-    answerCode: "for r in records:\n    expected = r[\"open\"] + r[\"in\"] - r[\"out\"]\n    if r[\"actual\"] == expected:\n        print(f\"{r['item']}: OK\")\n    else:\n        print(f\"{r['item']}: 差異{r['actual'] - expected}\")"
+    answerCode: "records = [\n    {\"item\": \"マグカップ\", \"open\": 20, \"in\": 10, \"out\": 8, \"actual\": 22},\n    {\"item\": \"Tシャツ\", \"open\": 50, \"in\": 0, \"out\": 12, \"actual\": 35},\n]\nfor r in records:\n    expected = r[\"open\"] + r[\"in\"] - r[\"out\"]\n    if r[\"actual\"] == expected:\n        print(f\"{r['item']}: OK\")\n    else:\n        print(f\"{r['item']}: 差異{r['actual'] - expected}\")"
   },
   {
     id: "a051",
@@ -2304,7 +2304,7 @@ const PROBLEMS = [
       "リードタイム（注文から発送までの日数）は物流品質のKPIで、悪化すればレビュー評価に直結します。各注文の日数差は 2日・4日・2日 で、平均 8÷3 = 2.7日です。\n\n" +
       "よくある間違い:\n・(d1 - d2).days と順序を逆にすると負の日数になります。「後の日付 - 前の日付」です\n・タプルのアンパック for ordered, shipped in orders: で2つの日付を同時に受け取るのがポイントです。",
     hint: "for ordered, shipped in orders: で受け取り、(d2 - d1).days をリストに集めて平均します。",
-    answerCode: "from datetime import datetime"
+    answerCode: "from datetime import datetime\n\norders = [(\"2026-06-01\", \"2026-06-03\"), (\"2026-06-02\", \"2026-06-06\"), (\"2026-06-05\", \"2026-06-07\")]\nleads = []\nfor ordered, shipped in orders:\n    d1 = datetime.strptime(ordered, \"%Y-%m-%d\")\n    d2 = datetime.strptime(shipped, \"%Y-%m-%d\")\n    leads.append((d2 - d1).days)\nprint(f\"平均リードタイム: {round(sum(leads) / len(leads), 1)}日\")"
   },
   {
     id: "a052",
@@ -2320,7 +2320,7 @@ const PROBLEMS = [
       "「在庫日数 = 在庫 ÷ 販売ペース」は、固定の発注点よりも実態に即した在庫管理の考え方です。割り算の結果（12÷4=3.0）は float になるため「3.0日分」と表示されます。計算結果から行動（発注）につなげる、分析の実務らしい問題です。\n\n" +
       "よくある間違い:\n・整数で表示したい場合は int() や :.0f を使いますが、この問題では 3.0 のままの出力が正解です\n・「7日未満」は < 7 です。<= にすると7.0日ちょうどの商品も要発注になってしまいます。",
     hint: "days = item[\"stock\"] / item[\"daily\"] を計算し、if days < 7: で分岐します。",
-    answerCode: "for item in items:\n    days = item[\"stock\"] / item[\"daily\"]\n    if days < 7:\n        print(f\"{item['name']}: あと{days}日分（要発注）\")\n    else:\n        print(f\"{item['name']}: あと{days}日分\")"
+    answerCode: "items = [\n    {\"name\": \"マグカップ\", \"stock\": 12, \"daily\": 4},\n    {\"name\": \"Tシャツ\", \"stock\": 60, \"daily\": 5},\n]\nfor item in items:\n    days = item[\"stock\"] / item[\"daily\"]\n    if days < 7:\n        print(f\"{item['name']}: あと{days}日分（要発注）\")\n    else:\n        print(f\"{item['name']}: あと{days}日分\")"
   },
   {
     id: "a053",
@@ -2352,7 +2352,7 @@ const PROBLEMS = [
       "「トランザクションデータ（注文）にマスタデータ（商品）を結合して意味を持たせる」のは、dbtのintermediate層やSQLのJOINで毎日行われる処理です。productsがID引きできる辞書になっているため、products[o[\"product_id\"]] の1行で結合できます。\n\n" +
       "よくある間違い:\n・マスタに存在しないIDが来ると KeyError になります。実務では products.get(id) で欠損に備えることも多いです\n・単価だけ（qty掛け忘れ）だと 1200+2500+1200=4900 になってしまいます。",
     hint: "p = products[o[\"product_id\"]] でマスタを引き、p[\"price\"] * o[\"qty\"] で金額を出します。",
-    answerCode: "total = 0\nfor o in orders:\n    p = products[o[\"product_id\"]]\n    amount = p[\"price\"] * o[\"qty\"]\n    total += amount\n    print(f\"{p['name']}: {amount}円\")\nprint(f\"合計: {total}円\")"
+    answerCode: "orders = [{\"product_id\": 1, \"qty\": 2}, {\"product_id\": 2, \"qty\": 1}, {\"product_id\": 1, \"qty\": 3}]\nproducts = {1: {\"name\": \"マグカップ\", \"price\": 1200}, 2: {\"name\": \"Tシャツ\", \"price\": 2500}}\ntotal = 0\nfor o in orders:\n    p = products[o[\"product_id\"]]\n    amount = p[\"price\"] * o[\"qty\"]\n    total += amount\n    print(f\"{p['name']}: {amount}円\")\nprint(f\"合計: {total}円\")"
   },
   {
     id: "a055",
@@ -2384,7 +2384,7 @@ const PROBLEMS = [
       "外部データを「信用せず、まず検証する」のはAPI連携の鉄則です。辞書に対する in はキーの存在チェックで、必須項目が揃ったデータだけを通すバリデーション処理が内包表記1行で書けます。\n\n" +
       "よくある間違い:\n・検証せずに i[\"price\"] にアクセスすると、2件目で KeyError になりプログラムが停止します\n・実務では「除外した件数をログに残す」ことも重要です（今回の有効2件・除外2件のように）。",
     hint: "[i for i in items if \"name\" in i and \"price\" in i] で必須項目チェックができます。",
-    answerCode: "valid = [i for i in items if \"name\" in i and \"price\" in i]\nprint(len(valid))\nprint([v[\"name\"] for v in valid])"
+    answerCode: "items = [\n    {\"name\": \"マグカップ\", \"price\": 1200},\n    {\"name\": \"ステッカー\"},\n    {\"price\": 500},\n    {\"name\": \"Tシャツ\", \"price\": 2500},\n]\nvalid = [i for i in items if \"name\" in i and \"price\" in i]\nprint(len(valid))\nprint([v[\"name\"] for v in valid])"
   },
   {
     id: "a057",
@@ -2400,7 +2400,7 @@ const PROBLEMS = [
       "APIは入れ子（ネスト）構造を返しますが、データベースのテーブルや表計算は平らな構造を前提とします。この「ネスト→フラット」変換はAPI連携・データ基盤構築で毎日のように書く処理です。入れ子の値は o[\"customer\"][\"name\"] と2段でアクセスし、customer_name のような複合名に付け替えます。\n\n" +
       "よくある間違い:\n・\"customer\": o[\"customer\"] と辞書ごと入れると入れ子のままになり、出力が一致しません\n・キーの名前（customer_name）は出力例と完全に一致させる必要があります。",
     hint: "o[\"customer\"][\"name\"] を \"customer_name\" キーに入れ替えて、平らな辞書を組み立てます。",
-    answerCode: "flat = []\nfor o in orders:\n    flat.append({\n        \"id\": o[\"id\"],\n        \"customer_name\": o[\"customer\"][\"name\"],\n        \"city\": o[\"customer\"][\"city\"],\n        \"amount\": o[\"amount\"],\n    })\nprint(flat)"
+    answerCode: "orders = [\n    {\"id\": 101, \"customer\": {\"name\": \"佐藤\", \"city\": \"東京\"}, \"amount\": 3200},\n    {\"id\": 102, \"customer\": {\"name\": \"鈴木\", \"city\": \"大阪\"}, \"amount\": 1800},\n]\nflat = []\nflat = []\nfor o in orders:\n    flat.append({\n        \"id\": o[\"id\"],\n        \"customer_name\": o[\"customer\"][\"name\"],\n        \"city\": o[\"customer\"][\"city\"],\n        \"amount\": o[\"amount\"],\n    })\nprint(flat)"
   },
   {
     id: "a058",
@@ -2416,7 +2416,7 @@ const PROBLEMS = [
       "ダッシュボードの数字は「どの母数で計算するか」が命です。売上・注文数・客単価はキャンセルを除いた有効注文で、キャンセル率は全注文を母数に計算します。先に valid リストを作っておくと、この母数の使い分けが明確なコードになります。\n\n" +
       "よくある間違い:\n・キャンセルを含めて売上を合計すると 12,000円 になり、過大なレポートになってしまいます\n・客単価 10200÷3=3400 はこのデータでは割り切れますが、round を忘れると割り切れないデータで桁あふれします。",
     hint: "valid = [o for o in orders if o[\"status\"] != \"キャンセル\"] を先に作り、4つの指標を順に計算します。",
-    answerCode: "valid = [o for o in orders if o[\"status\"] != \"キャンセル\"]\nsales = sum(o[\"amount\"] for o in valid)\nprint(f\"売上合計: {sales:,}円\")\nprint(f\"注文数: {len(valid)}件\")\nprint(f\"客単価: {round(sales / len(valid)):,}円\")\nprint(f\"キャンセル率: {(len(orders) - len(valid)) / len(orders):.1%}\")"
+    answerCode: "orders = [\n    {\"amount\": 3200, \"status\": \"発送済\"},\n    {\"amount\": 1800, \"status\": \"キャンセル\"},\n    {\"amount\": 4500, \"status\": \"発送済\"},\n    {\"amount\": 2500, \"status\": \"発送済\"},\n]\nvalid = [o for o in orders if o[\"status\"] != \"キャンセル\"]\nsales = sum(o[\"amount\"] for o in valid)\nprint(f\"売上合計: {sales:,}円\")\nprint(f\"注文数: {len(valid)}件\")\nprint(f\"客単価: {round(sales / len(valid)):,}円\")\nprint(f\"キャンセル率: {(len(orders) - len(valid)) / len(orders):.1%}\")"
   },
   {
     id: "a059",
@@ -2432,6 +2432,6 @@ const PROBLEMS = [
       "読み込み（Extract）→検証・変換（Transform）→集計→レポート出力という、このコースで学んだ要素をすべて組み合わせた総合問題です。鈴木さんの行は金額不正で除外、佐藤さんの4500円の行はキャンセルで除外され、佐藤 3200+1300=4500円、高橋 2100円が残ります。\n\n" +
       "よくある間違い:\n・佐藤さんの「4500円」は偶然キャンセル除外後の合計と同じ金額です。どの行が残ったか（6/1の3200円と6/3の1300円）を追って確認しましょう\n・検証→フィルタ→集計の順序が重要です。集計してからキャンセルを引く方法は、設計が複雑になりバグの温床になります。",
     hint: "a041と同じ骨格に「顧客別集計」と「降順ソートして出力」を組み合わせます。",
-    answerCode: "import csv\nimport io"
+    answerCode: "import csv\nimport io\nraw = \"date,customer,amount,status\\n6/1,佐藤,3200,done\\n6/1,鈴木,abc,done\\n6/2,佐藤,4500,cancel\\n6/2,高橋,2100,done\\n6/3,佐藤,1300,done\"\ntotals = {}\nimport csv\nimport io\n\ntotals = {}\nfor row in csv.DictReader(io.StringIO(raw)):\n    try:\n        amount = int(row[\"amount\"])\n    except ValueError:\n        continue\n    if row[\"status\"] == \"cancel\":\n        continue\n    totals[row[\"customer\"]] = totals.get(row[\"customer\"], 0) + amount\nfor name, total in sorted(totals.items(), key=lambda x: x[1], reverse=True):\n    print(f\"{name}: {total:,}円\")"
   }
 ];
