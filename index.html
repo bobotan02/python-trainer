@@ -1455,6 +1455,8 @@ df.sort_values("age", ascending=False)</pre>
         onSelect(btn);
         const pool = filteredProblems();
         if (pool.length > 0) showProblem(pool[0]);
+        // 該当0件の場合はshowProblem()がスキップされるため、進捗表示だけ個別に更新する
+        updateProgressUI();
       });
     });
   }
