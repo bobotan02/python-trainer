@@ -100,6 +100,7 @@
     border-bottom: 1px solid var(--border);
     font-weight: bold;
   }
+  .list-head-actions { display: flex; align-items: center; gap: 10px; }
   #btn-list-close {
     background: none; border: none;
     color: var(--text-dim);
@@ -107,6 +108,18 @@
     cursor: pointer;
   }
   #btn-list-close:hover { color: var(--text); }
+  #btn-reset-progress {
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: normal;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #btn-reset-progress:hover { border-color: var(--accent); color: var(--text); }
   #problem-list {
     list-style: none; margin: 0; padding: 8px;
     overflow-y: auto; flex: 1;
@@ -121,7 +134,14 @@
   }
   #problem-list li:hover { background: var(--bg-input); }
   #problem-list li.current { background: var(--bg-input); border-color: var(--accent); }
+  #problem-list li.solved { color: var(--text-dim); }
+  #problem-list li.solved.current { color: var(--text); }
   #problem-list li .badge { flex-shrink: 0; }
+  #progress-info {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+  }
 
   /* 隠しコマンド: Konami Code */
   #konami-banner {
@@ -455,6 +475,8 @@
     <button class="filter-btn" data-category="engineering">engineering</button>
     <button class="filter-btn" data-category="practice">practice</button>
   </div>
+
+  <div id="progress-info"></div>
 
   <!-- 問題文エリア -->
   <div class="panel">
@@ -860,7 +882,10 @@ df.sort_values("age", ascending=False)</pre>
   <div id="problem-list-panel">
     <div class="list-head">
       <span>📋 問題一覧</span>
-      <button id="btn-list-close" title="閉じる">×</button>
+      <div class="list-head-actions">
+        <button id="btn-reset-progress" title="進捗をリセット">進捗をリセット</button>
+        <button id="btn-list-close" title="閉じる">×</button>
+      </div>
     </div>
     <ul id="problem-list"></ul>
   </div>
@@ -919,7 +944,60 @@ df.sort_values("age", ascending=False)</pre>
     completeOverlay: $("complete-overlay"),
     completeMessage: $("complete-message"),
     btnRestart: $("btn-restart"),
+    progressInfo: $("progress-info"),
+    btnResetProgress: $("btn-reset-progress"),
   };
+
+  // ---- 学習進捗の保存（localStorage） ----
+  // GitHub Pagesは他リポジトリとオリジンを共有するため、専用プレフィックス付きキーを使う
+  const PROGRESS_KEY = "python-trainer:progress:v1";
+
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem(PROGRESS_KEY);
+      if (!raw) return { solved: {}, last: null };
+      const parsed = JSON.parse(raw);
+      return {
+        solved: (parsed && typeof parsed.solved === "object" && parsed.solved) || {},
+        last: (parsed && typeof parsed.last === "object" && parsed.last) || null,
+      };
+    } catch (err) {
+      console.warn("進捗の読み込みに失敗しました（localStorageが使えない環境の可能性があります）:", err);
+      return { solved: {}, last: null };
+    }
+  }
+
+  function saveProgress() {
+    try {
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    } catch (err) {
+      console.warn("進捗の保存に失敗しました（localStorageが使えない環境の可能性があります）:", err);
+    }
+  }
+
+  let progress = loadProgress();
+
+  function todayString() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+
+  function markSolved(problem) {
+    progress.solved[problem.id] = todayString();
+    saveProgress();
+    updateProgressUI();
+  }
+
+  function updateProgressUI() {
+    if (!els.progressInfo) return;
+    const solvedIds = Object.keys(progress.solved);
+    const pool = filteredProblems();
+    const solvedInPool = pool.filter((p) => progress.solved[p.id]).length;
+    els.progressInfo.textContent =
+      "解答済み " + solvedIds.length + " / " + PROBLEMS.length +
+      "（このフィルタ内 " + solvedInPool + " / " + pool.length + "）";
+  }
 
   // ---- 出力の正規化（改行コード・各行末尾の空白・前後の空白を吸収） ----
   function normalizeOutput(s) {
@@ -1012,6 +1090,9 @@ df.sort_values("age", ascending=False)</pre>
       spAnswerChip.style.display = problem.answerCode ? "" : "none";
       spAnswerChip.classList.remove("active");
     }
+    progress.last = { problemId: problem.id, level: currentFilter, category: currentCategory };
+    saveProgress();
+    updateProgressUI();
   }
 
   // ---- エラーパターン解説 ----
@@ -1134,13 +1215,14 @@ df.sort_values("age", ascending=False)</pre>
     filteredProblems().forEach((p) => {
       const li = document.createElement("li");
       if (currentProblem && p.id === currentProblem.id) li.classList.add("current");
+      if (progress.solved[p.id]) li.classList.add("solved");
 
       const badge = document.createElement("span");
       badge.className = "badge " + p.level;
       badge.textContent = p.level;
 
       const title = document.createElement("span");
-      title.textContent = "No." + problemNumber(p) + " " + p.title;
+      title.textContent = (progress.solved[p.id] ? "✅ " : "") + "No." + problemNumber(p) + " " + p.title;
 
       li.appendChild(badge);
       li.appendChild(title);
@@ -1231,6 +1313,7 @@ df.sort_values("age", ascending=False)</pre>
       els.output.textContent = userOutput === "" ? "（出力なし）" : userOutput;
 
       if (normalizeOutput(userOutput) === normalizeOutput(currentProblem.expectedOutput)) {
+        markSolved(currentProblem);
         showResult("correct", "✅ 正解！ おめでとうございます。");
       } else {
         showResult("wrong", "❌ 不正解 — 出力が期待値と一致しません。下の期待される出力と見比べてみましょう。");
@@ -1332,6 +1415,20 @@ df.sort_values("age", ascending=False)</pre>
       clearResult();
     }
   });
+
+  if (els.btnResetProgress) {
+    els.btnResetProgress.addEventListener("click", () => {
+      if (!confirm("解答済みの記録をすべて削除します。よろしいですか？")) return;
+      try {
+        localStorage.removeItem(PROGRESS_KEY);
+      } catch (err) {
+        console.warn("進捗の削除に失敗しました:", err);
+      }
+      progress = { solved: {}, last: null };
+      updateProgressUI();
+      renderProblemList();
+    });
+  }
 
   // タブ切り替え（問題 / リファレンス / ステップ実行）。DOMは消さずdisplay切り替えのみなので
   // エディタ内容や実行結果はタブを行き来しても保持される。
@@ -1659,8 +1756,39 @@ df.sort_values("age", ascending=False)</pre>
     obs.observe(els.overlay, { attributes: true });
   })();
 
+  // ---- 起動（前回の続きから再開。復元できない場合は従来通りNo.1から） ----
+  function activateFilterButton(rowId, datasetKey, value) {
+    const buttons = document.querySelectorAll("#" + rowId + " .filter-btn");
+    let matched = false;
+    buttons.forEach((b) => {
+      const isMatch = b.dataset[datasetKey] === value;
+      b.classList.toggle("active", isMatch);
+      if (isMatch) matched = true;
+    });
+    if (!matched) {
+      buttons.forEach((b) => b.classList.toggle("active", b.dataset[datasetKey] === "all"));
+    }
+  }
+
+  function restoreLastProblem() {
+    const last = progress.last;
+    if (!last || !last.problemId) return false;
+    const problem = PROBLEMS.find((p) => p.id === last.problemId);
+    if (!problem) return false;
+    if (last.level) {
+      currentFilter = last.level;
+      activateFilterButton("level-filter", "level", last.level);
+    }
+    if (last.category) {
+      currentCategory = last.category;
+      activateFilterButton("category-filter", "category", last.category);
+    }
+    showProblem(problem);
+    return true;
+  }
+
   // ---- 起動 ----
-  if (PROBLEMS.length > 0) showProblem(PROBLEMS[0]);
+  if (!restoreLastProblem() && PROBLEMS.length > 0) showProblem(PROBLEMS[0]);
   init();
 })();
 </script>
