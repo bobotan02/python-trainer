@@ -968,7 +968,7 @@ for row in csv.DictReader(io.StringIO(csv_text)):
 
     <div class="panel ref-section">
       <h3 id="ref-16">16. pandas入門（参考・読み物）</h3>
-      <p class="ref-note">⚠️ pandasは外部ライブラリのため、本ツールの実行環境では実行できません。このセクションは概念とコード例を紹介する参考資料です。手元で試す場合は「pip install pandas」でインストールしてください。</p>
+      <p class="ref-note">⚠️ pandasは本ツールでも実行できます（<code>import pandas</code>を含むコードを実行すると自動で読み込まれます。初回のみ数秒かかります。2回目以降はブラウザにキャッシュされ高速になります）。ただしDataFrameの表示（<code>print(df)</code>など）はpandasのバージョンによって列幅の空白が変わることがあるため、このツールの問題の正誤判定には使われていません。</p>
       <p><strong>pandasとは</strong>: 表形式データ（CSV・Excel・データベースの表など）を読み込み・加工・集計するためのデータ分析ライブラリです。データの前処理・集計・分析の定番ツールで、機械学習の前段階のデータ整形にも広く使われます。慣例として「import pandas as pd」と略称で読み込みます。</p>
       <p><strong>主要な3つの概念</strong>:</p>
       <ul>
@@ -1040,7 +1040,7 @@ data.fillna(0)
 
 # sort_values — age の大きい順に並べ替え
 df.sort_values("age", ascending=False)</pre>
-      <p class="ref-note">⚠️ 再掲: 上記のコードは本ツールのコードエディタでは実行できません（ModuleNotFoundError になります）。手元のPython環境（pandasインストール済み）で試してください。</p>
+      <p class="ref-note">⚠️ 再掲: 上記のコードは問題タブ・ステップ実行タブのエディタに貼り付けて実行できます（初回実行時はpandasの読み込みで数秒かかります）。ただし<code>df.groupby(...)</code>のように最後の式だけを書く行は、そのままでは画面に何も表示されません（本ツールは<code>print()</code>した内容だけを出力欄に表示します）。試す場合は<code>print(df.groupby("city")["age"].mean())</code>のように<code>print()</code>で囲んでください。</p>
     </div>
 
   </div><!-- /#tab-reference -->
