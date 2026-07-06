@@ -1284,6 +1284,27 @@ df.sort_values("age", ascending=False)</pre>
     setTimeout(() => banner.remove(), 3000);
   }
 
+  // ---- 追加パッケージの遅延ロード ----
+  // sqlite3はPyodideに初期同梱されておらず（unvendored）、loadPackageでの明示的な取得が必要
+  const loadedPackages = new Set();
+  async function ensurePackages(src) {
+    const needed = [];
+    if (/^\s*(import|from)\s+.*\bsqlite3\b/m.test(src) && !loadedPackages.has("sqlite3")) {
+      needed.push("sqlite3");
+    }
+    if (needed.length === 0) return;
+    const prevStatus = els.status.textContent;
+    const prevClass = els.status.className;
+    els.status.textContent = "📦 " + needed.join("・") + " を読み込んでいます…";
+    try {
+      await pyodide.loadPackage(needed);
+      needed.forEach((name) => loadedPackages.add(name));
+    } finally {
+      els.status.textContent = prevStatus;
+      els.status.className = prevClass;
+    }
+  }
+
   // ---- コード実行 ----
   async function runCode() {
     if (running) return;
@@ -1299,6 +1320,9 @@ df.sort_values("age", ascending=False)</pre>
     running = true;
     els.btnRun.disabled = true;
     clearResult();
+
+    await ensurePackages(els.editor.value);
+
     els.output.textContent = "実行中…";
 
     const stdoutLines = [];
@@ -1692,6 +1716,7 @@ df.sort_values("age", ascending=False)</pre>
       }
       const src = spEd.value;
       spSrcLines = src.split("\n");
+      await ensurePackages(src);
       const raw = await pyodide.runPythonAsync("run_trace(" + JSON.stringify(src) + ")");
       const data = JSON.parse(raw);
       spSteps  = data.steps  || [];
