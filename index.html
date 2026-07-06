@@ -1497,12 +1497,16 @@ df.sort_values("age", ascending=False)</pre>
   }
 
   // ---- 追加パッケージの遅延ロード ----
-  // sqlite3はPyodideに初期同梱されておらず（unvendored）、loadPackageでの明示的な取得が必要
+  // sqlite3・pandasはPyodideに初期同梱されておらず（unvendored）、loadPackageでの明示的な取得が必要
   const loadedPackages = new Set();
   async function ensurePackages(src) {
     const needed = [];
     if (/^\s*(import|from)\s+.*\bsqlite3\b/m.test(src) && !loadedPackages.has("sqlite3")) {
       needed.push("sqlite3");
+    }
+    // numpyだけimportされた場合もpandasを読み込めば依存として入るためpandasのみを対象にする
+    if (/^\s*(import|from)\s+.*\b(pandas|numpy)\b/m.test(src) && !loadedPackages.has("pandas")) {
+      needed.push("pandas");
     }
     if (needed.length === 0) return;
     const prevStatus = els.status.textContent;
