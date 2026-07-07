@@ -252,13 +252,30 @@
   details.hint p { margin: 8px 0 0; color: var(--text-dim); font-size: 0.9rem; }
 
   /* エディタ */
+  .editor-wrap { display: flex; align-items: stretch; }
+  .editor-gutter {
+    flex-shrink: 0;
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    padding: 12px 8px 12px 12px;
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    text-align: right;
+    white-space: pre;
+    overflow: hidden;
+    user-select: none;
+  }
   #editor {
     width: 100%;
     min-height: 220px;
     background: var(--bg-input);
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0 8px 8px 0;
     padding: 12px 14px;
     font-family: var(--mono);
     font-size: 0.92rem;
@@ -347,7 +364,7 @@
     background: var(--bg-input);
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0 8px 8px 0;
     padding: 12px 14px;
     font-family: var(--mono);
     font-size: 0.92rem;
@@ -438,6 +455,27 @@
     padding: 10px 14px; font-family: var(--mono);
     font-size: 0.86rem; white-space: pre-wrap; margin: 0 0 12px;
   }
+
+  /* キーボード操作時のフォーカスリング（マウスクリック時は表示しない） */
+  .btn:focus-visible,
+  .filter-btn:focus-visible,
+  .tab-btn:focus-visible,
+  #editor:focus-visible,
+  #sp-ed:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* レスポンシブ（タブレット・スマホ幅） */
+  @media (max-width: 640px) {
+    .container { padding: 16px 10px 48px; }
+    .filter-btn { padding: 5px 10px; font-size: 0.85rem; }
+    .key-tip { display: none; }
+    .btn { padding: 9px 16px; font-size: 0.9rem; }
+    header h1 { font-size: 1.25rem; }
+    header .subtitle { font-size: 0.78rem; }
+    #progress-info { font-size: 0.8rem; }
+  }
 </style>
 </head>
 <body>
@@ -499,7 +537,10 @@
   <!-- コードエディタ -->
   <div class="panel">
     <div class="section-label">コード（Python）</div>
-    <textarea id="editor" spellcheck="false"></textarea>
+    <div class="editor-wrap">
+      <div class="editor-gutter" id="editor-gutter">1</div>
+      <textarea id="editor" spellcheck="false" wrap="off"></textarea>
+    </div>
     <div class="btn-row">
       <button id="btn-run" class="btn btn-run" disabled>▶ 実行</button>
       <button id="btn-reset" class="btn btn-reset">コードをリセット</button>
@@ -1055,7 +1096,10 @@ df.sort_values("age", ascending=False)</pre>
       <div class="section-label">サンプルを選ぶ</div>
       <div class="filter-row" id="sp-samples"></div>
       <div class="section-label">コード（Python）</div>
-      <textarea id="sp-ed" spellcheck="false" placeholder="ここにPythonコードを書いて「ステップ実行」を押す"></textarea>
+      <div class="editor-wrap">
+        <div class="editor-gutter" id="sp-ed-gutter">1</div>
+        <textarea id="sp-ed" spellcheck="false" wrap="off" placeholder="ここにPythonコードを書いて「ステップ実行」を押す"></textarea>
+      </div>
       <div class="btn-row">
         <button id="sp-run-btn" class="btn btn-run" disabled>▶ ステップ実行</button>
       </div>
@@ -1159,6 +1203,24 @@ df.sort_values("age", ascending=False)</pre>
     progressInfo: $("progress-info"),
     btnResetProgress: $("btn-reset-progress"),
   };
+
+  // ---- エディタ行番号ガター ----
+  // wrap="off"（折り返しなし）と組み合わせることで「1論理行=1表示行」を保証し、行番号がズレないようにしている
+  function updateGutter(textarea, gutter) {
+    const lineCount = textarea.value.split("\n").length;
+    let text = "";
+    for (let i = 1; i <= lineCount; i++) text += i + "\n";
+    gutter.textContent = text.slice(0, -1);
+  }
+  function syncGutterScroll(textarea, gutter) {
+    gutter.scrollTop = textarea.scrollTop;
+  }
+  const editorGutter = $("editor-gutter");
+  const spEdGutter = $("sp-ed-gutter");
+  function updateEditorGutter() { updateGutter(els.editor, editorGutter); }
+  function updateSpEdGutter() { updateGutter($("sp-ed"), spEdGutter); }
+  els.editor.addEventListener("input", updateEditorGutter);
+  els.editor.addEventListener("scroll", () => syncGutterScroll(els.editor, editorGutter));
 
   // ---- 学習進捗の保存（localStorage） ----
   // GitHub Pagesは他リポジトリとオリジンを共有するため、専用プレフィックス付きキーを使う
@@ -1296,6 +1358,7 @@ df.sort_values("age", ascending=False)</pre>
       els.hintBlock.style.display = "none";
     }
     els.editor.value = problem.starterCode || "";
+    updateEditorGutter();
     clearResult();
     // ステッパーの「この問題の答え」チップを更新（chip生成後なら表示切替）
     if (typeof spAnswerChip !== "undefined" && spAnswerChip) {
@@ -1535,6 +1598,8 @@ df.sort_values("age", ascending=False)</pre>
     if (!pyodide || !currentProblem) return;
     running = true;
     els.btnRun.disabled = true;
+    const btnRunLabel = els.btnRun.textContent;
+    els.btnRun.textContent = "⏳ 実行中…";
     clearResult();
 
     await ensurePackages(els.editor.value);
@@ -1568,6 +1633,7 @@ df.sort_values("age", ascending=False)</pre>
       namespace.destroy();
       running = false;
       els.btnRun.disabled = false;
+      els.btnRun.textContent = btnRunLabel;
     }
   }
 
@@ -1652,6 +1718,7 @@ df.sort_values("age", ascending=False)</pre>
   els.btnReset.addEventListener("click", () => {
     if (currentProblem) {
       els.editor.value = currentProblem.starterCode || "";
+      updateEditorGutter();
       clearResult();
     }
   });
@@ -1730,6 +1797,8 @@ df.sort_values("age", ascending=False)</pre>
   ];
 
   const spEd              = $("sp-ed");
+  spEd.addEventListener("input", updateSpEdGutter);
+  spEd.addEventListener("scroll", () => syncGutterScroll(spEd, spEdGutter));
   const spRunBtn          = $("sp-run-btn");
   const spCodeview        = $("sp-codeview");
   const spStepperCtrl     = $("sp-stepper");
@@ -1762,6 +1831,7 @@ df.sort_values("age", ascending=False)</pre>
       container.querySelectorAll(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
       spAnswerChip.classList.add("active");
       spEd.value = currentProblem.answerCode;
+      updateSpEdGutter();
     });
     container.appendChild(spAnswerChip);
 
@@ -1773,11 +1843,13 @@ df.sort_values("age", ascending=False)</pre>
         container.querySelectorAll(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
         btn.classList.add("active");
         spEd.value = s.code;
+        updateSpEdGutter();
       });
       container.appendChild(btn);
     });
   })();
   spEd.value = SP_SAMPLES[0].code;
+  updateSpEdGutter();
 
   spEd.addEventListener("keydown", function (e) {
     if (e.key === "Tab") {
@@ -1922,6 +1994,8 @@ df.sort_values("age", ascending=False)</pre>
     }
     spStopPlay();
     spRunBtn.disabled = true;
+    const spRunBtnLabel = spRunBtn.textContent;
+    spRunBtn.textContent = "⏳ 実行中…";
     spErrbox.style.display = "none";
     spErrorExplainBlock.style.display = "none";
 
@@ -1973,6 +2047,7 @@ df.sort_values("age", ascending=False)</pre>
       }
     } finally {
       spRunBtn.disabled = false;
+      spRunBtn.textContent = spRunBtnLabel;
     }
   });
 
