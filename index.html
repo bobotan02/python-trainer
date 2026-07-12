@@ -108,7 +108,7 @@
     cursor: pointer;
   }
   #btn-list-close:hover { color: var(--text); }
-  #btn-reset-progress {
+  .list-action-btn {
     background: var(--bg-input);
     color: var(--text-dim);
     border: 1px solid var(--border);
@@ -119,7 +119,8 @@
     cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
   }
-  #btn-reset-progress:hover { border-color: var(--accent); color: var(--text); }
+  .list-action-btn:hover { border-color: var(--accent); color: var(--text); }
+  .list-io-row { display: flex; gap: 8px; padding: 10px 16px 0; }
   .list-search-row { display: flex; gap: 8px; padding: 10px 16px 0; }
   #problem-search {
     flex: 1;
@@ -421,6 +422,26 @@
   }
 
   #expected-block { display: none; margin-bottom: 12px; }
+  #diff-note {
+    display: none;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+  }
+  .diff-headline { color: var(--yellow); margin-bottom: 6px; }
+  .diff-row { display: flex; gap: 8px; align-items: baseline; margin: 2px 0; }
+  .diff-row .diff-label { color: var(--text-dim); flex-shrink: 0; width: 2.6em; }
+  .diff-row code {
+    font-family: var(--mono);
+    background: var(--bg-panel);
+    padding: 1px 6px;
+    border-radius: 4px;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
 
   details.explanation { display: none; border-top: 1px dashed var(--border); margin-top: 4px; padding-top: 10px; }
   details.explanation summary { cursor: pointer; color: var(--purple); font-weight: bold; user-select: none; }
@@ -652,6 +673,7 @@
   <div class="panel">
     <div id="result-banner"></div>
     <div id="expected-block">
+      <div id="diff-note"></div>
       <div class="section-label">期待される出力</div>
       <pre id="expected-output" class="output"></pre>
     </div>
@@ -1231,9 +1253,14 @@ df.sort_values("age", ascending=False)</pre>
     <div class="list-head">
       <span>📋 問題一覧</span>
       <div class="list-head-actions">
-        <button id="btn-reset-progress" title="進捗をリセット">進捗をリセット</button>
+        <button id="btn-reset-progress" class="list-action-btn" title="進捗をリセット">進捗をリセット</button>
         <button id="btn-list-close" title="閉じる">×</button>
       </div>
+    </div>
+    <div class="list-io-row">
+      <button id="btn-export-progress" class="list-action-btn" title="進捗をファイルに書き出す">⬇️ 書き出す</button>
+      <button id="btn-import-progress" class="list-action-btn" title="ファイルから進捗を読み込む">⬆️ 読み込む</button>
+      <input type="file" id="import-file-input" accept="application/json" style="display:none">
     </div>
     <div class="list-search-row">
       <input type="search" id="problem-search" placeholder="🔍 番号・タイトル・問題文で検索">
@@ -1287,6 +1314,7 @@ df.sort_values("age", ascending=False)</pre>
     resultBanner: $("result-banner"),
     expectedBlock: $("expected-block"),
     expectedOutput: $("expected-output"),
+    diffNote: $("diff-note"),
     explanationBlock: $("explanation-block"),
     explanationBody: $("explanation-body"),
     errorExplainBlock: $("error-explain-block"),
@@ -1306,6 +1334,9 @@ df.sort_values("age", ascending=False)</pre>
     problemSearch: $("problem-search"),
     btnBookmarkFilter: $("btn-bookmark-filter"),
     btnBookmark: $("btn-bookmark"),
+    btnExportProgress: $("btn-export-progress"),
+    btnImportProgress: $("btn-import-progress"),
+    importFileInput: $("import-file-input"),
   };
 
   // ---- エディタ行番号ガター ----
@@ -1470,6 +1501,59 @@ df.sort_values("age", ascending=False)</pre>
   }
 
   let progress = loadProgress();
+
+  // ---- 進捗のエクスポート/インポート（ローカルファイルのみ。外部送信なし） ----
+  const EXPORT_APP_NAME = "python-trainer";
+  const EXPORT_SCHEMA = 1;
+
+  function buildExportPayload() {
+    return {
+      app: EXPORT_APP_NAME,
+      schema: EXPORT_SCHEMA,
+      exportedAt: new Date().toISOString(),
+      progress: {
+        solved: progress.solved,
+        last: progress.last,
+        activity: progress.activity,
+        bookmarks: progress.bookmarks,
+      },
+    };
+  }
+
+  function exportProgress() {
+    const payload = buildExportPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "python-trainer-progress.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // 読み込んだJSONが本ツールの進捗ファイルとして最低限の形を満たしているか検証する
+  function validateImportPayload(payload) {
+    if (!payload || typeof payload !== "object") return false;
+    if (payload.app !== EXPORT_APP_NAME) return false;
+    const p = payload.progress;
+    if (!p || typeof p !== "object") return false;
+    if (typeof p.solved !== "object" || p.solved === null) return false;
+    return true;
+  }
+
+  // 検証済みのpayloadから新しいprogressを組み立てる（未知のproblemIdは許容。欠けたフィールドはフォールバック）
+  function buildProgressFromImport(payload) {
+    const p = payload.progress;
+    const solved = (p.solved && typeof p.solved === "object") ? p.solved : {};
+    return {
+      solved,
+      last: (p.last && typeof p.last === "object") ? p.last : null,
+      activity: (p.activity && typeof p.activity === "object") ? p.activity : deriveActivityFromSolved(solved),
+      bookmarks: (p.bookmarks && typeof p.bookmarks === "object") ? p.bookmarks : {},
+    };
+  }
 
   function dateStringFromDate(d) {
     const pad = (n) => String(n).padStart(2, "0");
@@ -1648,6 +1732,46 @@ df.sort_values("age", ascending=False)</pre>
       .map((line) => line.replace(/[ \t]+$/, ""))
       .join("\n")
       .trim();
+  }
+
+  // ---- 不正解時の出力diff（判定そのものは変更しない。normalizeOutput後の値を行単位で比較して表示するだけ） ----
+  // 戻り値: 一致していれば null。最初に異なる行があれば { type: "line", lineNo, expected, actual }。
+  // 共通部分は一致するが行数が違う場合は { type: "missing"|"extra", lineNo }
+  function computeOutputDiff(expectedRaw, actualRaw) {
+    const expLines = normalizeOutput(expectedRaw).split("\n");
+    const actLines = normalizeOutput(actualRaw).split("\n");
+    const commonLen = Math.min(expLines.length, actLines.length);
+    for (let i = 0; i < commonLen; i++) {
+      if (expLines[i] !== actLines[i]) {
+        return { type: "line", lineNo: i + 1, expected: expLines[i], actual: actLines[i] };
+      }
+    }
+    if (actLines.length < expLines.length) return { type: "missing", lineNo: actLines.length + 1 };
+    if (actLines.length > expLines.length) return { type: "extra", lineNo: expLines.length + 1 };
+    return null;
+  }
+
+  function renderDiffNote(expectedRaw, actualRaw) {
+    if (!els.diffNote) return;
+    const diff = computeOutputDiff(expectedRaw, actualRaw);
+    if (!diff) {
+      els.diffNote.style.display = "none";
+      els.diffNote.innerHTML = "";
+      return;
+    }
+    let html;
+    if (diff.type === "line") {
+      html =
+        '<div class="diff-headline">' + diff.lineNo + "行目が期待と異なります</div>" +
+        '<div class="diff-row"><span class="diff-label">期待</span><code>' + spEscHtml(diff.expected) + "</code></div>" +
+        '<div class="diff-row"><span class="diff-label">実際</span><code>' + spEscHtml(diff.actual) + "</code></div>";
+    } else if (diff.type === "missing") {
+      html = '<div class="diff-headline">' + diff.lineNo + "行目以降が不足しています</div>";
+    } else {
+      html = '<div class="diff-headline">期待より行数が多いです（' + diff.lineNo + "行目以降が余分）</div>";
+    }
+    els.diffNote.innerHTML = html;
+    els.diffNote.style.display = "block";
   }
 
   // category未設定の問題は foundation として扱う（フォールバック）
@@ -1856,6 +1980,10 @@ df.sort_values("age", ascending=False)</pre>
     els.resultBanner.className = "";
     els.resultBanner.textContent = "";
     els.expectedBlock.style.display = "none";
+    if (els.diffNote) {
+      els.diffNote.style.display = "none";
+      els.diffNote.innerHTML = "";
+    }
     els.explanationBlock.style.display = "none";
     els.explanationBlock.open = false;
     els.errorExplainBlock.style.display = "none";
@@ -1863,7 +1991,8 @@ df.sort_values("age", ascending=False)</pre>
   }
 
   // ---- 判定結果の表示 ----
-  function showResult(kind, message, errorText) {
+  // actualOutput は kind === "wrong" のときのみ使用（diff表示用。判定結果自体には影響しない）
+  function showResult(kind, message, errorText, actualOutput) {
     els.resultBanner.className = kind; // correct / wrong / error
     els.resultBanner.textContent = message;
 
@@ -1891,6 +2020,7 @@ df.sort_values("age", ascending=False)</pre>
       // 不正解時のみ期待される出力を表示
       els.expectedOutput.textContent = currentProblem.expectedOutput;
       els.expectedBlock.style.display = "block";
+      renderDiffNote(currentProblem.expectedOutput, actualOutput || "");
     } else {
       els.expectedBlock.style.display = "none";
     }
@@ -2059,7 +2189,7 @@ df.sort_values("age", ascending=False)</pre>
         markSolved(currentProblem);
         showResult("correct", "✅ 正解！ おめでとうございます。");
       } else {
-        showResult("wrong", "❌ 不正解 — 出力が期待値と一致しません。下の期待される出力と見比べてみましょう。");
+        showResult("wrong", "❌ 不正解 — 出力が期待値と一致しません。下の期待される出力と見比べてみましょう。", null, userOutput);
       }
     } catch (err) {
       const partial = stdoutLines.join("\n");
@@ -2190,6 +2320,45 @@ df.sort_values("age", ascending=False)</pre>
       updateProgressUI();
       updateBookmarkButton();
       renderProblemList();
+    });
+  }
+
+  // 進捗のエクスポート（ローカルファイルへの書き出しのみ。外部送信なし）
+  if (els.btnExportProgress) {
+    els.btnExportProgress.addEventListener("click", exportProgress);
+  }
+
+  // 進捗のインポート（ファイル選択→検証→確認→反映。不正なファイルはalertで拒否し現状維持）
+  if (els.btnImportProgress && els.importFileInput) {
+    els.btnImportProgress.addEventListener("click", () => els.importFileInput.click());
+    els.importFileInput.addEventListener("change", () => {
+      const file = els.importFileInput.files && els.importFileInput.files[0];
+      els.importFileInput.value = ""; // 同じファイルを連続選択してもchangeが発火するようにリセット
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        let payload;
+        try {
+          payload = JSON.parse(String(reader.result));
+        } catch (err) {
+          alert("進捗ファイルの形式が不正です（JSONとして読み込めませんでした）");
+          return;
+        }
+        if (!validateImportPayload(payload)) {
+          alert("進捗ファイルの形式が不正です（python-trainerの進捗ファイルではないようです）");
+          return;
+        }
+        if (!confirm("現在の進捗を上書きします。よろしいですか？")) return;
+        progress = buildProgressFromImport(payload);
+        saveProgress();
+        updateProgressUI();
+        updateBookmarkButton();
+        renderProblemList();
+      };
+      reader.onerror = () => {
+        alert("ファイルの読み込みに失敗しました");
+      };
+      reader.readAsText(file);
     });
   }
 
