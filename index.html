@@ -120,6 +120,39 @@
     transition: border-color 0.15s, color 0.15s;
   }
   #btn-reset-progress:hover { border-color: var(--accent); color: var(--text); }
+  .list-search-row { display: flex; gap: 8px; padding: 10px 16px 0; }
+  #problem-search {
+    flex: 1;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 0.85rem;
+  }
+  #problem-search:focus { outline: none; border-color: var(--accent); }
+  #btn-bookmark-filter { flex-shrink: 0; }
+  #btn-bookmark-filter.active { background: var(--yellow); border-color: var(--yellow); color: #332a0b; font-weight: bold; }
+  #problem-list li.empty-msg {
+    color: var(--text-dim);
+    justify-content: center;
+    cursor: default;
+    font-size: 0.85rem;
+  }
+  #problem-list li.empty-msg:hover { background: none; }
+  #problem-list li .li-title { flex: 1; min-width: 0; }
+  #problem-list li .bm-star {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 2px 4px;
+    color: var(--text-dim);
+  }
+  #problem-list li .bm-star:hover { color: var(--yellow); }
+  #problem-list li .bm-star.active { color: var(--yellow); }
   #problem-list {
     list-style: none; margin: 0; padding: 8px;
     overflow-y: auto; flex: 1;
@@ -276,6 +309,17 @@
   /* 問題表示 */
   .problem-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .problem-head h2 { font-size: 1.15rem; margin: 0; }
+  .bookmark-btn {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--text-dim);
+    padding: 0 2px;
+  }
+  .bookmark-btn:hover { color: var(--yellow); }
+  .bookmark-btn.active { color: var(--yellow); }
   .badge {
     font-size: 0.72rem; font-weight: bold;
     padding: 2px 10px; border-radius: 999px;
@@ -573,6 +617,7 @@
     <div class="problem-head">
       <span id="problem-badge" class="badge beginner">beginner</span>
       <h2 id="problem-title">—</h2>
+      <button id="btn-bookmark" class="bookmark-btn" aria-pressed="false" title="ブックマーク">☆</button>
     </div>
     <div id="problem-desc"></div>
     <details class="hint" id="hint-block">
@@ -1190,6 +1235,10 @@ df.sort_values("age", ascending=False)</pre>
         <button id="btn-list-close" title="閉じる">×</button>
       </div>
     </div>
+    <div class="list-search-row">
+      <input type="search" id="problem-search" placeholder="🔍 番号・タイトル・問題文で検索">
+      <button id="btn-bookmark-filter" class="filter-btn" aria-pressed="false" title="ブックマークした問題のみ表示">⭐のみ</button>
+    </div>
     <div id="progress-map"></div>
     <ul id="problem-list"></ul>
   </div>
@@ -1217,6 +1266,8 @@ df.sort_values("age", ascending=False)</pre>
   let currentProblem = null;
   let currentFilter = "all";
   let currentCategory = "all";
+  let searchQuery = ""; // 問題一覧パネルの検索語（セッション内のみ・保存しない）
+  let bookmarkOnly = false; // 「⭐のみ表示」トグル（セッション内のみ・保存しない）
   let running = false;
 
   const $ = (id) => document.getElementById(id);
@@ -1252,6 +1303,9 @@ df.sort_values("age", ascending=False)</pre>
     milestoneInfo: $("milestone-info"),
     progressMap: $("progress-map"),
     btnResetProgress: $("btn-reset-progress"),
+    problemSearch: $("problem-search"),
+    btnBookmarkFilter: $("btn-bookmark-filter"),
+    btnBookmark: $("btn-bookmark"),
   };
 
   // ---- エディタ行番号ガター ----
@@ -1388,20 +1442,22 @@ df.sort_values("age", ascending=False)</pre>
   function loadProgress() {
     try {
       const raw = localStorage.getItem(PROGRESS_KEY);
-      if (!raw) return { solved: {}, last: null, activity: {} };
+      if (!raw) return { solved: {}, last: null, activity: {}, bookmarks: {} };
       const parsed = JSON.parse(raw);
       const solved = (parsed && typeof parsed.solved === "object" && parsed.solved) || {};
       const activity =
         (parsed && typeof parsed.activity === "object" && parsed.activity) ||
         deriveActivityFromSolved(solved);
+      const bookmarks = (parsed && typeof parsed.bookmarks === "object" && parsed.bookmarks) || {};
       return {
         solved,
         last: (parsed && typeof parsed.last === "object" && parsed.last) || null,
         activity,
+        bookmarks,
       };
     } catch (err) {
       console.warn("進捗の読み込みに失敗しました（localStorageが使えない環境の可能性があります）:", err);
-      return { solved: {}, last: null, activity: {} };
+      return { solved: {}, last: null, activity: {}, bookmarks: {} };
     }
   }
 
@@ -1608,6 +1664,25 @@ df.sort_values("age", ascending=False)</pre>
     );
   }
 
+  // 問題一覧パネルの検索マッチ判定（通し番号「151」「No.151」どちらでも・タイトル・問題文の部分一致、大文字小文字を区別しない）
+  function matchesSearch(problem, query) {
+    const q = query.trim().toLowerCase();
+    if (q === "") return true;
+    const num = String(problemNumber(problem));
+    if (num.includes(q) || ("no." + num).includes(q)) return true;
+    if (problem.title.toLowerCase().includes(q)) return true;
+    if (problem.description.toLowerCase().includes(q)) return true;
+    return false;
+  }
+
+  // 問題一覧パネル表示専用の絞り込み（難易度×カテゴリ×検索語×⭐のみ表示のAND）。
+  // 次の問題／🎲ランダム／進捗マップの集計対象は filteredProblems() のままで、パネル表示にのみ適用する
+  function panelFilteredProblems() {
+    return filteredProblems().filter(
+      (p) => matchesSearch(p, searchQuery) && (!bookmarkOnly || !!progress.bookmarks[p.id])
+    );
+  }
+
   function pickRandomProblem() {
     const pool = filteredProblems();
     if (pool.length === 0) return null;
@@ -1660,6 +1735,7 @@ df.sort_values("age", ascending=False)</pre>
     els.badge.textContent = problem.level;
     els.badge.className = "badge " + problem.level;
     els.title.textContent = "No." + problemNumber(problem) + " " + problem.title;
+    updateBookmarkButton();
     els.desc.textContent = problem.description;
     if (problem.hint) {
       els.hintBlock.style.display = "";
@@ -1679,6 +1755,31 @@ df.sort_values("age", ascending=False)</pre>
     progress.last = { problemId: problem.id, level: currentFilter, category: currentCategory };
     saveProgress();
     updateProgressUI();
+  }
+
+  // ---- ブックマーク（⭐/☆トグル） ----
+  function updateBookmarkButton() {
+    if (!els.btnBookmark) return;
+    const active = !!(currentProblem && progress.bookmarks[currentProblem.id]);
+    els.btnBookmark.textContent = active ? "⭐" : "☆";
+    els.btnBookmark.classList.toggle("active", active);
+    els.btnBookmark.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+
+  // 問題IDを指定してブックマークをトグルする（問題タブのボタン・問題一覧パネルの⭐ボタン共通）
+  function toggleBookmarkFor(problemId) {
+    if (progress.bookmarks[problemId]) {
+      delete progress.bookmarks[problemId];
+    } else {
+      progress.bookmarks[problemId] = true;
+    }
+    saveProgress();
+    if (currentProblem && currentProblem.id === problemId) updateBookmarkButton();
+  }
+
+  function toggleBookmark() {
+    if (!currentProblem) return;
+    toggleBookmarkFor(currentProblem.id);
   }
 
   // ---- エラーパターン解説 ----
@@ -1799,7 +1900,17 @@ df.sort_values("age", ascending=False)</pre>
   function renderProblemList() {
     renderProgressMap();
     els.problemList.innerHTML = "";
-    filteredProblems().forEach((p) => {
+    const list = panelFilteredProblems();
+
+    if (list.length === 0) {
+      const li = document.createElement("li");
+      li.className = "empty-msg";
+      li.textContent = "該当する問題がありません";
+      els.problemList.appendChild(li);
+      return;
+    }
+
+    list.forEach((p) => {
       const li = document.createElement("li");
       if (currentProblem && p.id === currentProblem.id) li.classList.add("current");
       if (progress.solved[p.id]) li.classList.add("solved");
@@ -1809,10 +1920,25 @@ df.sort_values("age", ascending=False)</pre>
       badge.textContent = p.level;
 
       const title = document.createElement("span");
+      title.className = "li-title";
       title.textContent = (progress.solved[p.id] ? "✅ " : "") + "No." + problemNumber(p) + " " + p.title;
+
+      const star = document.createElement("button");
+      star.type = "button";
+      const isBookmarked = !!progress.bookmarks[p.id];
+      star.className = "bm-star" + (isBookmarked ? " active" : "");
+      star.textContent = isBookmarked ? "⭐" : "☆";
+      star.title = "ブックマークを切り替え";
+      star.setAttribute("aria-pressed", isBookmarked ? "true" : "false");
+      star.addEventListener("click", (e) => {
+        e.stopPropagation(); // 行クリック（問題へのジャンプ）を発火させない
+        toggleBookmarkFor(p.id);
+        renderProblemList(); // 「⭐のみ表示」中は対象から外れる場合があるため再描画
+      });
 
       li.appendChild(badge);
       li.appendChild(title);
+      li.appendChild(star);
       li.addEventListener("click", () => {
         showProblem(p);
         closeProblemList();
@@ -1995,6 +2121,27 @@ df.sort_values("age", ascending=False)</pre>
     if (e.target === els.listOverlay) closeProblemList(); // 背景クリックで閉じる
   });
 
+  // 問題一覧パネル: キーワード検索・「⭐のみ表示」トグル（検索語・トグル状態はセッション内のみ）
+  if (els.problemSearch) {
+    els.problemSearch.addEventListener("input", () => {
+      searchQuery = els.problemSearch.value;
+      renderProblemList();
+    });
+  }
+  if (els.btnBookmarkFilter) {
+    els.btnBookmarkFilter.addEventListener("click", () => {
+      bookmarkOnly = !bookmarkOnly;
+      els.btnBookmarkFilter.classList.toggle("active", bookmarkOnly);
+      els.btnBookmarkFilter.setAttribute("aria-pressed", bookmarkOnly ? "true" : "false");
+      renderProblemList();
+    });
+  }
+
+  // 問題表示エリアのブックマークトグル
+  if (els.btnBookmark) {
+    els.btnBookmark.addEventListener("click", toggleBookmark);
+  }
+
   // Escで問題一覧を閉じる ＋ Konami Code監視
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -2037,14 +2184,11 @@ df.sort_values("age", ascending=False)</pre>
 
   if (els.btnResetProgress) {
     els.btnResetProgress.addEventListener("click", () => {
-      if (!confirm("解答済みの記録をすべて削除します。よろしいですか？")) return;
-      try {
-        localStorage.removeItem(PROGRESS_KEY);
-      } catch (err) {
-        console.warn("進捗の削除に失敗しました:", err);
-      }
-      progress = { solved: {}, last: null, activity: {} };
+      if (!confirm("解答済みの記録（解答状況・連続学習日数・称号）をすべて削除します。ブックマークは保持されます。よろしいですか？")) return;
+      progress = { solved: {}, last: null, activity: {}, bookmarks: progress.bookmarks || {} };
+      saveProgress();
       updateProgressUI();
+      updateBookmarkButton();
       renderProblemList();
     });
   }
