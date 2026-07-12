@@ -593,7 +593,7 @@
       <button id="btn-reset" class="btn btn-reset">コードをリセット</button>
       <button id="btn-next" class="btn btn-next">次の問題 →</button>
       <button id="btn-random" class="btn btn-next">🎲 ランダム</button>
-      <span class="key-tip">Ctrl+Enter でも実行できます</span>
+      <span class="key-tip">Ctrl+Enter で実行 / Ctrl+/ でコメント切替</span>
     </div>
   </div>
 
@@ -1271,6 +1271,105 @@ df.sort_values("age", ascending=False)</pre>
   function updateSpEdGutter() { updateGutter($("sp-ed"), spEdGutter); }
   els.editor.addEventListener("input", updateEditorGutter);
   els.editor.addEventListener("scroll", () => syncGutterScroll(els.editor, editorGutter));
+
+  // ---- エディタ機能拡充（Ctrl+/ コメントトグル・Shift+Tab インデント解除・Enterで自動インデント） ----
+  // 選択範囲を含む行の [開始位置, 終了位置) を返す
+  function lineRangeOf(value, start, end) {
+    const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+    const searchEnd = value.indexOf("\n", end);
+    const lineEnd = searchEnd === -1 ? value.length : searchEnd;
+    return { lineStart, lineEnd };
+  }
+
+  // 選択行が全て「#」コメントなら解除、そうでなければ各行の先頭インデントの直後に "# " を挿入する
+  function toggleComment(textarea) {
+    const value = textarea.value;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const { lineStart, lineEnd } = lineRangeOf(value, start, end);
+    const block = value.slice(lineStart, lineEnd);
+    const lines = block.split("\n");
+    const nonEmpty = lines.filter((l) => l.trim() !== "");
+    const allCommented = nonEmpty.length > 0 && nonEmpty.every((l) => /^\s*#/.test(l));
+    const newLines = lines.map((line) => {
+      if (line.trim() === "") return line;
+      if (allCommented) return line.replace(/^(\s*)#\s?/, "$1");
+      const indent = line.match(/^\s*/)[0];
+      return indent + "# " + line.slice(indent.length);
+    });
+    const newBlock = newLines.join("\n");
+    const diffFirstLine = newLines[0].length - lines[0].length;
+    const totalDiff = newBlock.length - block.length;
+    textarea.value = value.slice(0, lineStart) + newBlock + value.slice(lineEnd);
+    textarea.selectionStart = Math.max(lineStart, start + diffFirstLine);
+    textarea.selectionEnd = Math.max(textarea.selectionStart, end + totalDiff);
+  }
+
+  // 選択行の先頭の空白（最大4文字 or タブ1文字）を取り除く
+  function dedentSelection(textarea) {
+    const value = textarea.value;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const { lineStart, lineEnd } = lineRangeOf(value, start, end);
+    const block = value.slice(lineStart, lineEnd);
+    const lines = block.split("\n");
+    let firstLineRemoved = 0;
+    const newLines = lines.map((line, i) => {
+      const m = line.match(/^( {1,4}|\t)/);
+      const removed = m ? m[0].length : 0;
+      if (i === 0) firstLineRemoved = removed;
+      return removed > 0 ? line.slice(removed) : line;
+    });
+    const newBlock = newLines.join("\n");
+    const totalDiff = newBlock.length - block.length;
+    textarea.value = value.slice(0, lineStart) + newBlock + value.slice(lineEnd);
+    textarea.selectionStart = Math.max(lineStart, start - firstLineRemoved);
+    textarea.selectionEnd = Math.max(textarea.selectionStart, end + totalDiff);
+  }
+
+  // Enter押下時、直前行のインデントを引き継ぐ（直前行が ":" で終わる場合はさらに4スペース追加）
+  function autoIndentOnEnter(textarea) {
+    const value = textarea.value;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const { lineStart } = lineRangeOf(value, start, start);
+    const currentLine = value.slice(lineStart, start);
+    let indent = currentLine.match(/^\s*/)[0];
+    if (currentLine.trim().endsWith(":")) indent += "    ";
+    const insertion = "\n" + indent;
+    textarea.value = value.slice(0, start) + insertion + value.slice(end);
+    textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+  }
+
+  // Tab/Shift+Tab・Ctrl(Cmd)+/・Enter を共通処理する（問題タブ・ステップ実行タブの両エディタで使う）
+  function handleEditorKeydown(e, textarea, onGutterUpdate) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        dedentSelection(textarea);
+      } else {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        textarea.value = textarea.value.substring(0, start) + "    " + textarea.value.substring(end);
+        textarea.selectionStart = textarea.selectionEnd = start + 4;
+      }
+      onGutterUpdate();
+      return true;
+    }
+    if (e.key === "/" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      toggleComment(textarea);
+      onGutterUpdate();
+      return true;
+    }
+    if (e.key === "Enter" && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      autoIndentOnEnter(textarea);
+      onGutterUpdate();
+      return true;
+    }
+    return false;
+  }
 
   // ---- 学習進捗の保存（localStorage） ----
   // GitHub Pagesは他リポジトリとオリジンを共有するため、専用プレフィックス付きキーを使う
@@ -1983,19 +2082,14 @@ df.sort_values("age", ascending=False)</pre>
   setupFilterRow("level-filter", (btn) => { currentFilter = btn.dataset.level; });
   setupFilterRow("category-filter", (btn) => { currentCategory = btn.dataset.category; });
 
-  // Tabキーで4スペース挿入・Ctrl+Enterで実行
+  // Tab/Shift+Tab・Ctrl+/ コメントトグル・Enterで自動インデント・Ctrl+Enterで実行
   els.editor.addEventListener("keydown", (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const start = els.editor.selectionStart;
-      const end = els.editor.selectionEnd;
-      els.editor.value =
-        els.editor.value.substring(0, start) + "    " + els.editor.value.substring(end);
-      els.editor.selectionStart = els.editor.selectionEnd = start + 4;
-    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       runCode();
+      return;
     }
+    handleEditorKeydown(e, els.editor, updateEditorGutter);
   });
 
   // ---- ステップ実行タブ ----
@@ -2065,12 +2159,7 @@ df.sort_values("age", ascending=False)</pre>
   updateSpEdGutter();
 
   spEd.addEventListener("keydown", function (e) {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const s = spEd.selectionStart;
-      spEd.value = spEd.value.slice(0, s) + "    " + spEd.value.slice(spEd.selectionEnd);
-      spEd.selectionStart = spEd.selectionEnd = s + 4;
-    }
+    handleEditorKeydown(e, spEd, updateSpEdGutter);
   });
 
   function spEscHtml(s) {
