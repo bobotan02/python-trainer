@@ -342,6 +342,21 @@
   .badge.intermediate { background: #3a2f1d; color: #ffd180; }
   .badge.advanced     { background: #34203a; color: #d8b4e8; }
   #problem-desc { white-space: pre-wrap; margin-top: 10px; color: var(--text); }
+  /* 問題→関連リファレンスへのリンクチップ（TASK-024） */
+  #ref-links { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+  #ref-links:empty { display: none; margin-top: 0; }
+  #ref-links .ref-links-label { color: var(--text-dim); font-size: 0.82rem; margin-right: 2px; }
+  .ref-link-chip {
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ref-link-chip:hover { border-color: var(--accent); color: var(--text); }
 
   details.hint { margin-top: 12px; }
   details.hint summary { cursor: pointer; color: var(--yellow); font-size: 0.88rem; user-select: none; }
@@ -654,6 +669,7 @@
       <button id="btn-bookmark" class="bookmark-btn" aria-pressed="false" title="ブックマーク">☆</button>
     </div>
     <div id="problem-desc"></div>
+    <div id="ref-links"></div>
     <details class="hint" id="hint-block">
       <summary>💡 ヒントを見る</summary>
       <p id="hint-text"></p>
@@ -1353,6 +1369,7 @@ df.sort_values("age", ascending=False)</pre>
     badge: $("problem-badge"),
     title: $("problem-title"),
     desc: $("problem-desc"),
+    refLinks: $("ref-links"),
     hintBlock: $("hint-block"),
     hintText: $("hint-text"),
     editor: $("editor"),
@@ -1910,6 +1927,7 @@ df.sort_values("age", ascending=False)</pre>
     els.title.textContent = "No." + problemNumber(problem) + " " + problem.title;
     updateBookmarkButton();
     els.desc.textContent = problem.description;
+    updateRefLinks(problem);
     if (problem.hint) {
       els.hintBlock.style.display = "";
       els.hintBlock.open = false;
@@ -2432,6 +2450,48 @@ df.sort_values("age", ascending=False)</pre>
     const details = h3.closest("details.ref-fold");
     if (details) details.open = true;
     h3.scrollIntoView({ block: "start" });
+  }
+
+  // ---- 問題→関連リファレンスへのリンク（TASK-024） ----
+  // starterCode+answerCode内のimport文からモジュールを検出し、対応するリファレンスセクションへのチップを表示する。
+  // ensurePackages()と同じ「行頭のimport/from」パターンでコメント行の誤検出を防ぐ。problems.jsは無変更。
+  const REF_LINK_RULES = [
+    { re: /^\s*(import|from)\s+.*\bsqlite3\b/m, sectionId: "ref-11", label: "SQL入門（sqlite3）" },
+    { re: /^\s*(import|from)\s+.*\bre\b/m, sectionId: "ref-12", label: "正規表現（re）" },
+    { re: /^\s*(import|from)\s+.*\bdatetime\b/m, sectionId: "ref-13", label: "日付と時刻（datetime）" },
+    { re: /^\s*(import|from)\s+.*\b(collections|itertools)\b/m, sectionId: "ref-14", label: "collections・itertools" },
+    { re: /^\s*(import|from)\s+.*\b(json|csv)\b/m, sectionId: "ref-15", label: "JSON・CSVの読み書き" },
+    { re: /^\s*(import|from)\s+.*\b(pandas|numpy)\b/m, sectionId: "ref-16", label: "pandas入門" },
+  ];
+
+  function detectRefLinks(src) {
+    return REF_LINK_RULES.filter((rule) => rule.re.test(src));
+  }
+
+  function goToRefSection(sectionId) {
+    const refTabBtn = document.querySelector('.tab-btn[data-tab="reference"]');
+    if (refTabBtn) refTabBtn.click();
+    openRefSection(sectionId);
+  }
+
+  function updateRefLinks(problem) {
+    if (!els.refLinks) return;
+    els.refLinks.innerHTML = "";
+    const src = (problem.starterCode || "") + "\n" + (problem.answerCode || "");
+    const matches = detectRefLinks(src);
+    if (matches.length === 0) return;
+    const label = document.createElement("span");
+    label.className = "ref-links-label";
+    label.textContent = "📖 関連リファレンス:";
+    els.refLinks.appendChild(label);
+    matches.forEach((rule) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "ref-link-chip";
+      chip.textContent = rule.label;
+      chip.addEventListener("click", () => goToRefSection(rule.sectionId));
+      els.refLinks.appendChild(chip);
+    });
   }
 
   // 目次リンクはデフォルトの#ジャンプだと閉じたdetailsの中身が見えないため、
